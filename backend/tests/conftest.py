@@ -1,9 +1,14 @@
 import os
 from pathlib import Path
 
-os.environ["DATABASE_URL"] = (
-    "postgresql://postgres:Mv%40060904@localhost:5432/project_tracker_test"
-)
+if "GITHUB_ACTIONS" in os.environ:
+    os.environ["DATABASE_URL"] = (
+        "postgresql://postgres:postgres@localhost:5432/project_tracker_test"
+    )
+elif "DATABASE_URL" not in os.environ:
+    os.environ["DATABASE_URL"] = (
+        "postgresql://postgres:Mv%40060904@localhost:5432/project_tracker_test"
+    )
 
 from fastapi.testclient import TestClient
 import pytest
