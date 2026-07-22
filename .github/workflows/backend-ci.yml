@@ -2,15 +2,9 @@ name: Backend CI
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - develop
+    branches: [main, master, develop]
   pull_request:
-    branches:
-      - main
-      - master
-      - develop
+    branches: [main, master, develop]
 
 jobs:
   test:
@@ -31,10 +25,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-    defaults:
-      run:
-        working-directory: backend
-
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/project_tracker_test
       SECRET_KEY: test_secret_key
@@ -42,7 +32,7 @@ jobs:
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -58,11 +48,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install Dependencies
+      - name: Install dependencies
+        working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Tests
+      - name: Run tests
+        working-directory: backend
         run: |
           python -m pytest -v
