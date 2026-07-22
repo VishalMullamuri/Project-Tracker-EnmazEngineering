@@ -7,7 +7,8 @@ from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
 )
-from jose import jwt
+import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -38,7 +39,7 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def validate_password(password: str):
+def validate_password(password: str) -> bool:
     if len(password) < 8:
         return False
 
@@ -74,15 +75,17 @@ def verify_password(
 def create_access_token(
     data: dict,
     expires_delta: Optional[timedelta] = None,
-):
+) -> str:
     to_encode = data.copy()
 
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
+    expire = (
+        datetime.utcnow() + expires_delta
+        if expires_delta
+        else datetime.utcnow()
+        + timedelta(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
+    )
 
     to_encode.update({"exp": expire})
 
@@ -115,13 +118,13 @@ def get_current_user(
             algorithms=[ALGORITHM],
         )
 
-        email = payload.get("sub")
-        token_version = payload.get("token_version")
+        email: str | None = payload.get("sub")
+        token_version: int | None = payload.get("token_version")
 
         if email is None:
             raise credentials_exception
 
-    except Exception:
+    except InvalidTokenError:
         raise credentials_exception
 
     user = (
