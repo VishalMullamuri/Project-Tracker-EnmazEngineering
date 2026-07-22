@@ -34,7 +34,11 @@ function App() {
 
         <Route
   path="/admin"
-  element={<AdminDashboard />}
+  element={
+    <ProtectedRoute>
+      <AdminDashboard />
+    </ProtectedRoute>
+  }
 />
 
         <Route
@@ -53,7 +57,11 @@ function App() {
 
         <Route
   path="/employee/:id"
-  element={<EmployeeDetails />}
+  element={
+    <ProtectedRoute>
+      <EmployeeDetails />
+    </ProtectedRoute>
+  }
 />
 
 

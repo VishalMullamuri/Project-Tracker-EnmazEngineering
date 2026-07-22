@@ -22,10 +22,10 @@ def dashboard_stats(
 ):
 
     # ==========================
-    # MANAGER
+    # ADMIN & MANAGER
     # ==========================
 
-    if current_user.role.value == "MANAGER":
+    if current_user.role.value in ["ADMIN", "MANAGER"]:
 
         total_projects = db.query(Project).count()
 

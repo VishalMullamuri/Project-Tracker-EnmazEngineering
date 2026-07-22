@@ -123,9 +123,10 @@ def get_single_task(
     current_user: User = Depends(get_current_user),
 ):
     task = get_task(
-        db,
-        task_id,
-    )
+    db,
+    task_id,
+    current_user,
+)
 
     if not task:
         raise HTTPException(

@@ -72,7 +72,7 @@ def get_all_tasks(
         )
     )
 
-    if current_user.role.value != "MANAGER":
+    if current_user.role.value not in ["MANAGER", "ADMIN"]:
 
         query = query.filter(
             Task.assigned_to == current_user.id
@@ -147,11 +147,11 @@ def update_task(
     if not db_task:
         return None
 
-    if current_user.role.value != "MANAGER":
+    if current_user.role.value == "TEAM_MEMBER":
         if db_task.assigned_to != current_user.id:
             return None
 
-    if current_user.role.value == "MANAGER":
+    if current_user.role.value in ["MANAGER", "ADMIN"]:
 
         db_task.title = task.title
         db_task.description = task.description

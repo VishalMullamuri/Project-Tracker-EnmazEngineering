@@ -28,22 +28,17 @@ def create_employee(
         raise Exception(
             "User already exists."
         )
-    
-    print("Employee schema role:", employee.role)
 
     db_user = User(
-    name=employee.name,
-    email=employee.email,
-    password=hash_password(employee.password),
-    role=employee.role,
-)
-    print("Before commit:", db_user.role)
+        name=employee.name,
+        email=employee.email,
+        password=hash_password(employee.password),
+        role=UserRole.TEAM_MEMBER,
+    )
 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-
-    print("After commit:", db_user.role)
 
     db_employee = Employee(
         name=employee.name,
@@ -106,7 +101,6 @@ def update_employee(
         )
 
         if db_user:
-
             db_user.name = employee.name
             db_user.email = employee.email
 
