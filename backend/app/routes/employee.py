@@ -56,7 +56,7 @@ def create(
 )
 def get_all(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager),
 ):
     return get_all_employees(db)
 
@@ -72,7 +72,7 @@ def get_all(
 def get(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager),
 ):
     employee = get_employee(
         db,

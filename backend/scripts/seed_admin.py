@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+import os
 
 from app.database.database import SessionLocal
 from app.models.user import User, UserRole
@@ -6,8 +7,8 @@ from app.core.security import hash_password
 
 
 ADMIN_NAME = "Admin"
-ADMIN_EMAIL = "admin@example.com"
-ADMIN_PASSWORD = "Admin@123"
+ADMIN_EMAIL = os.environ["SEED_ADMIN_EMAIL"]
+ADMIN_PASSWORD = os.environ["SEED_ADMIN_PASSWORD"]
 
 
 def seed_admin():
@@ -30,7 +31,7 @@ def seed_admin():
             password=hash_password(ADMIN_PASSWORD),
             role=UserRole.ADMIN,
             is_active=True,
-            first_login=False,
+            first_login=True,
         )
 
         db.add(admin)

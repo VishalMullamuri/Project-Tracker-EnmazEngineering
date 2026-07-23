@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.user import User
 
-from app.core.security import get_current_user
+from app.core.permissions import require_manager
 
 router = APIRouter(
     prefix="/users",
@@ -15,7 +15,7 @@ router = APIRouter(
 @router.get("")
 def get_users(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager),
 ):
     users = db.query(User).all()
 

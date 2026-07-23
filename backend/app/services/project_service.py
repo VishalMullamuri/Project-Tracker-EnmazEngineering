@@ -158,10 +158,8 @@ def update_project(
     if not db_project:
         return None
 
-    db_project.project_name = project.project_name
-    db_project.description = project.description
-    db_project.start_date = project.start_date
-    db_project.end_date = project.end_date
+    for field, value in project.model_dump(exclude_unset=True).items():
+        setattr(db_project, field, value)
 
     calculate_progress(
         db,

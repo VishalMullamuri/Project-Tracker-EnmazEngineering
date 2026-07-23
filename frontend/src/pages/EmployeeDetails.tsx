@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   useLocation,
   useNavigate,
+  useParams,
 } from "react-router-dom";
 
 import api from "../api/axios";
@@ -43,173 +44,42 @@ const EmployeeDetails = () => {
 
   const location = useLocation();
 
+  const { id } = useParams();
+
   const [employee, setEmployee] =
-    useState<Employee>(
-      location.state.employee
+    useState<Employee | null>(
+      location.state?.employee ?? null
     );
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [editOpen, setEditOpen] =
     useState(false);
 
   const [projects, setProjects] =
-  useState<Project[]>([]);
+    useState<Project[]>([]);
 
+  const [completedTasks, setCompletedTasks] =
+    useState(0);
 
+  const [assignedTasks, setAssignedTasks] =
+    useState(0);
 
-const [completedTasks, setCompletedTasks] =
-  useState(0);
+  const [completionRate, setCompletionRate] =
+    useState(0);
 
-const [assignedTasks, setAssignedTasks] =
-  useState(0);
+  const [pendingTasks, setPendingTasks] =
+    useState(0);
 
-const [completionRate, setCompletionRate] =
-  useState(0);
+  const [inProgressTasks, setInProgressTasks] =
+    useState(0);
 
-const [pendingTasks, setPendingTasks] =
-  useState(0);
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
-const [inProgressTasks, setInProgressTasks] =
-  useState(0);
+  const projectsPerPage = 3;
 
-const [currentPage, setCurrentPage] =
-  useState(1);
-
-const projectsPerPage = 3;
-
-  useEffect(() => {
-
-  fetchEmployee();
-  fetchEmployeeData();
-
-}, []);
-
-const fetchEmployeeData = async () => {
-
-  try {
-
-    const token =
-      localStorage.getItem("token");
-
-    const assignments =
-      await api.get(
-        "/project-employees/all",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-    const employeeProjects =
-      assignments.data
-        .filter(
-          (item: any) =>
-            item.employee_id ===
-            employee.id
-        )
-        .map(
-          (item: any) =>
-            item.project_id
-        );
-
-    const projectResponse =
-      await api.get(
-        "/projects",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-    setProjects(
-
-      projectResponse.data.filter(
-        (project: Project) =>
-          employeeProjects.includes(
-            project.id
-          )
-      )
-
-    );
-
-    const taskResponse =
-      await api.get(
-        "/tasks",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-    const employeeTasks =
-  taskResponse.data.filter(
-    (task: any) =>
-      task.assigned_to ===
-      employee.user_id
-  );
-
-    setAssignedTasks(
-  employeeTasks.length
-);
-
-    setCompletedTasks(
-
-      employeeTasks.filter(
-        (task: Task) =>
-          task.status ===
-          "Completed"
-      ).length
-
-    );
-
-    setPendingTasks(
-
-      employeeTasks.filter(
-        (task: Task) =>
-          task.status ===
-          "Pending"
-      ).length
-
-    );
-
-    setInProgressTasks(
-
-      employeeTasks.filter(
-        (task: Task) =>
-          task.status ===
-          "In Progress"
-      ).length
-
-    );
-
-    const completed =
-  employeeTasks.filter(
-    (task: Task) =>
-      task.status ===
-      "Completed"
-  ).length;
-
-setCompletionRate(
-
-  employeeTasks.length === 0
-    ? 0
-    : Math.round(
-        (completed /
-          employeeTasks.length) *
-          100
-      )
-
-);
-
-  } catch (error) {
-
-    console.error(error);
-
-  }
-
-};
   const fetchEmployee = async () => {
 
     try {
@@ -219,7 +89,7 @@ setCompletionRate(
 
       const response =
         await api.get(
-          `/employees/${employee.id}`,
+          `/employees/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -233,9 +103,147 @@ setCompletionRate(
 
       console.error(error);
 
+    } finally {
+
+      setLoading(false);
+
     }
 
   };
+
+  const fetchEmployeeData = async () => {
+
+    if (!employee) return;
+
+    try {
+
+      const token =
+        localStorage.getItem("token");
+
+      const assignments =
+        await api.get(
+          "/project-employees/all",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+      const employeeProjects =
+        assignments.data
+          .filter(
+            (item: any) =>
+              item.employee_id ===
+              employee.id
+          )
+          .map(
+            (item: any) =>
+              item.project_id
+          );
+
+      const projectResponse =
+        await api.get(
+          "/projects",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+      setProjects(
+        projectResponse.data.filter(
+          (project: Project) =>
+            employeeProjects.includes(
+              project.id
+            )
+        )
+      );
+
+      const taskResponse =
+        await api.get(
+          "/tasks",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+      const employeeTasks =
+        taskResponse.data.filter(
+          (task: any) =>
+            task.assigned_to ===
+            employee.user_id
+        );
+
+      setAssignedTasks(
+        employeeTasks.length
+      );
+
+      setCompletedTasks(
+        employeeTasks.filter(
+          (task: Task) =>
+            task.status ===
+            "Completed"
+        ).length
+      );
+
+      setPendingTasks(
+        employeeTasks.filter(
+          (task: Task) =>
+            task.status ===
+            "Pending"
+        ).length
+      );
+
+      setInProgressTasks(
+        employeeTasks.filter(
+          (task: Task) =>
+            task.status ===
+            "In Progress"
+        ).length
+      );
+
+      const completed =
+        employeeTasks.filter(
+          (task: Task) =>
+            task.status ===
+            "Completed"
+        ).length;
+
+      setCompletionRate(
+        employeeTasks.length === 0
+          ? 0
+          : Math.round(
+              (completed /
+                employeeTasks.length) *
+                100
+            )
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    fetchEmployee();
+
+  }, []);
+
+  useEffect(() => {
+
+    if (employee) {
+      fetchEmployeeData();
+    }
+
+  }, [employee]);
 
   const updateEmployee = async (
     updatedEmployee: {
@@ -244,6 +252,8 @@ setCompletionRate(
       phone: string;
     }
   ) => {
+
+    if (!employee) return;
 
     try {
 
@@ -277,6 +287,8 @@ setCompletionRate(
   };
 
   const deleteEmployee = async () => {
+
+    if (!employee) return;
 
     const confirmDelete =
       window.confirm(
@@ -318,22 +330,43 @@ setCompletionRate(
   };
 
   const indexOfLastProject =
-  currentPage * projectsPerPage;
+    currentPage * projectsPerPage;
 
-const indexOfFirstProject =
-  indexOfLastProject - projectsPerPage;
+  const indexOfFirstProject =
+    indexOfLastProject -
+    projectsPerPage;
 
-const currentProjects =
-  projects.slice(
-    indexOfFirstProject,
-    indexOfLastProject
-  );
+  const currentProjects =
+    projects.slice(
+      indexOfFirstProject,
+      indexOfLastProject
+    );
 
-const totalPages =
-  Math.ceil(
-    projects.length /
-      projectsPerPage
-  );
+  const totalPages =
+    Math.ceil(
+      projects.length /
+        projectsPerPage
+    );
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="p-6">
+          Loading...
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <Layout>
+        <div className="p-6">
+          Employee not found.
+        </div>
+      </Layout>
+    );
+  }
 
   return (
 

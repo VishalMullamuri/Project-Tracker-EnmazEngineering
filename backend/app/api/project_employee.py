@@ -17,7 +17,10 @@ from app.crud.project_employee import (
 )
 
 from app.core.security import get_current_user
-from app.core.permissions import require_manager
+from app.core.permissions import (
+    require_manager,
+    require_manager_or_project_member,
+)
 
 router = APIRouter(
     prefix="/project-employees",
@@ -70,7 +73,7 @@ def remove(
 @router.get("/all")
 def get_all_assignments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager),
 ):
     return (
         db.query(ProjectEmployee)
@@ -86,7 +89,7 @@ def get_all_assignments(
 def get_members(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager_or_project_member),
 ):
     return get_project_employees(
         db,

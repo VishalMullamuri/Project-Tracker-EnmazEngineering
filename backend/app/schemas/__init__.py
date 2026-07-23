@@ -5,8 +5,6 @@ from .user import Token
 from .project import ProjectCreate
 from .project import ProjectUpdate
 from .project import ProjectResponse
-from .project_member import ProjectMemberCreate
-from .project_member import ProjectMemberResponse
 from .task import TaskCreate
 from .task import TaskUpdate
 from .task import TaskResponse

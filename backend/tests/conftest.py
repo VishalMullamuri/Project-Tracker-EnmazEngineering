@@ -1,14 +1,22 @@
 import os
 from pathlib import Path
 
+import pytest
+from sqlalchemy.engine.url import make_url
+
 if "GITHUB_ACTIONS" in os.environ:
-    os.environ["DATABASE_URL"] = (
+    os.environ["TEST_DATABASE_URL"] = (
         "postgresql://postgres:postgres@localhost:5432/project_tracker_test"
     )
-elif "DATABASE_URL" not in os.environ:
-    os.environ["DATABASE_URL"] = (
-        "postgresql://postgres:Mv%40060904@localhost:5432/project_tracker_test"
+
+url = os.environ.get("TEST_DATABASE_URL")
+
+if not url or not make_url(url).database.endswith("_test"):
+    pytest.exit(
+        "TEST_DATABASE_URL must be set and name a *_test database"
     )
+
+os.environ["DATABASE_URL"] = url
 
 from fastapi.testclient import TestClient
 import pytest

@@ -17,152 +17,99 @@ type Employee = {
   name: string;
   email: string;
   phone: string;
+  projects?: number;
 };
 
 const AdminDashboard = () => {
-
-  const [employees, setEmployees] =
-    useState<Employee[]>([]);
-
-  const [projectCount, setProjectCount] =
-    useState(0);
-
-  const [assignedEmployees, setAssignedEmployees] =
-    useState(0);
-
-  const [availableEmployees, setAvailableEmployees] =
-    useState(0);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projectCount, setProjectCount] = useState(0);
+  const [assignedEmployees, setAssignedEmployees] = useState(0);
+  const [availableEmployees, setAvailableEmployees] = useState(0);
 
   useEffect(() => {
+    loadDashboard();
+  }, []);
 
-  const loadData = async () => {
+  const loadDashboard = async (): Promise<void> => {
+  try {
+    const token = localStorage.getItem("token");
 
-    await fetchEmployees();
-    await fetchDashboardData();
+    // Employees
+    const employeeResponse = await api.get("/employees", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  };
+    const employeeData: Employee[] = employeeResponse.data;
 
-  loadData();
+    // Projects
+    const projectResponse = await api.get("/projects", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-}, []);
-
-  const fetchEmployees = async () => {
-
-    try {
-
-      const token =
-        localStorage.getItem("token");
-
-      const response =
-        await api.get(
-          "/employees",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-      const employeeData = response.data;
-
-setEmployees(employeeData);
-
-return employeeData;
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  };
-
-  const fetchDashboardData = async () => {
-
-    try {
-
-      const token =
-        localStorage.getItem("token");
-
-      const projects =
-        await api.get(
-          "/projects",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-      setProjectCount(
-        projects.data.length
-      );
-
-      const assignments =
-  await api.get(
-    "/project-employees/all",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-      const projectMap =
-  new Map<number, number>();
-
-assignments.data.forEach(
-  (item: any) => {
-
-    projectMap.set(
-      item.employee_id,
-      (projectMap.get(
-        item.employee_id
-      ) ?? 0) + 1
+    // Assignments
+    const assignmentResponse = await api.get(
+      "/project-employees/all",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
 
+    const assignments = assignmentResponse.data;
+
+    const projectMap = new Map<number, number>();
+
+    assignments.forEach((item: any) => {
+      projectMap.set(
+        item.employee_id,
+        (projectMap.get(item.employee_id) ?? 0) + 1
+      );
+    });
+
+    const updatedEmployees = employeeData.map((employee) => ({
+      ...employee,
+      projects: projectMap.get(employee.id) ?? 0,
+    }));
+
+    setEmployees(updatedEmployees);
+
+    setProjectCount(projectResponse.data.length);
+
+    const uniqueEmployees = new Set<number>();
+
+    assignments.forEach((item: any) => {
+      uniqueEmployees.add(item.employee_id);
+    });
+
+    const assigned = uniqueEmployees.size;
+
+    setAssignedEmployees(assigned);
+
+    setAvailableEmployees(
+      Math.max(0, employeeData.length - assigned)
+    );
+  } catch (error) {
+    console.error(error);
   }
-);
+};
 
-setEmployees((prev) =>
-  prev.map((employee) => ({
-    ...employee,
-    projects:
-      projectMap.get(employee.id) ?? 0,
-  }))
-);
+const refreshEmployees = async (): Promise<void> => {
+  await loadDashboard();
+};
 
-      const uniqueEmployees =
-        new Set(
-          assignments.data.map(
-            (item: any) =>
-              item.employee_id
-          )
-        );
+const refreshDashboard = async (): Promise<void> => {
+  await loadDashboard();
+};
 
-      setAssignedEmployees(
-        uniqueEmployees.size
-      );
-
-      setAvailableEmployees(
-        employees.length -
-          uniqueEmployees.size
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  };
 
   return (
-
     <Layout>
-
       <div className="grid grid-cols-4 gap-5">
-
         <SummaryCard
           title="Employees"
           value={employees.length}
@@ -177,8 +124,8 @@ setEmployees((prev) =>
         />
 
         <SummaryCard
-  title="Projects"
-  value={projectCount}
+          title="Projects"
+          value={projectCount}
           subtitle="Total Projects"
           icon={
             <FolderKanban
@@ -190,8 +137,8 @@ setEmployees((prev) =>
         />
 
         <SummaryCard
-  title="Assigned"
-  value={assignedEmployees}
+          title="Assigned"
+          value={assignedEmployees}
           subtitle="Assigned Employees"
           icon={
             <UserCheck
@@ -203,8 +150,8 @@ setEmployees((prev) =>
         />
 
         <SummaryCard
-  title="Available"
-  value={availableEmployees}
+          title="Available"
+          value={availableEmployees}
           subtitle="Unassigned Employees"
           icon={
             <UserX
@@ -214,18 +161,15 @@ setEmployees((prev) =>
           }
           iconBg="bg-orange-100"
         />
-
       </div>
 
       <EmployeeTable
   employees={employees}
-  refreshEmployees={fetchEmployees}
-  refreshDashboard={fetchDashboardData}
+  refreshEmployees={refreshEmployees}
+  refreshDashboard={refreshDashboard}
 />
     </Layout>
-
   );
-
 };
 
 export default AdminDashboard;
