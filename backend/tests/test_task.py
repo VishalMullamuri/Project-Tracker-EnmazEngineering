@@ -15,6 +15,9 @@ def create_task(client, manager_headers, employee_user):
         },
     )
 
+    print("\nPROJECT STATUS:", project.status_code)
+    print("PROJECT BODY:", project.json())
+
     project_id = project.json()["id"]
 
     task = client.post(
@@ -31,8 +34,10 @@ def create_task(client, manager_headers, employee_user):
         },
     )
 
-    return task.json()
+    print("\nTASK STATUS:", task.status_code)
+    print("TASK BODY:", task.json())
 
+    return task.json()
 
 def test_create_task(client, manager_headers, employee_user):
 

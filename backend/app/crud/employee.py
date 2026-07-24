@@ -15,7 +15,10 @@ def create_employee(
 ):
     existing_user = (
         db.query(User)
-        .filter(User.email == employee.email)
+        .filter(
+            User.email == employee.email,
+            User.is_active.is_(True),
+        )
         .first()
     )
 
@@ -43,13 +46,13 @@ def create_employee(
             phone=employee.phone,
             user_id=db_user.id,
             created_by=current_user.id,
+            is_active=True,
         )
 
         db.add(db_employee)
 
         db.commit()
 
-        db.refresh(db_user)
         db.refresh(db_employee)
 
         return db_employee
@@ -69,7 +72,11 @@ def create_employee(
 def get_all_employees(
     db: Session,
 ):
-    return db.query(Employee).all()
+    return (
+        db.query(Employee)
+        .filter(Employee.is_active.is_(True))
+        .all()
+    )
 
 
 def get_employee(
@@ -78,7 +85,10 @@ def get_employee(
 ):
     return (
         db.query(Employee)
-        .filter(Employee.id == employee_id)
+        .filter(
+            Employee.id == employee_id,
+            Employee.is_active.is_(True),
+        )
         .first()
     )
 
@@ -163,6 +173,8 @@ def delete_employee(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this employee",
         )
+
+    db_employee.is_active = False
 
     if db_employee.user_id:
         db_user = (

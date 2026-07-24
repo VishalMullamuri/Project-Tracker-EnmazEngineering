@@ -14,6 +14,9 @@ config.set_main_option(
     "sqlalchemy.url",
     DATABASE_URL.replace("%", "%%")
 )
+print("=" * 80)
+print("DATABASE_URL =", DATABASE_URL)
+print("=" * 80)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -35,10 +38,11 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    config.get_section(config.config_ini_section, {}),
+    prefix="sqlalchemy.",
+    poolclass=pool.NullPool,
+    echo=True,
+)
 
     with connectable.connect() as connection:
         context.configure(

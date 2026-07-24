@@ -17,7 +17,8 @@ from app.crud.employee import (
     delete_employee,
 )
 
-from app.models.user import User
+from app.models.user import User, UserRole
+from app.models.employee import Employee
 from app.core.permissions import require_manager
 
 router = APIRouter(
@@ -58,7 +59,17 @@ def get_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    return get_all_employees(db)
+    if current_user.role == UserRole.ADMIN:
+        return get_all_employees(db)
+
+    return (
+        db.query(Employee)
+        .filter(
+            Employee.created_by == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .all()
+    )
 
 
 # ----------------------------------
@@ -83,6 +94,15 @@ def get(
         raise HTTPException(
             status_code=404,
             detail="Employee not found",
+        )
+
+    if (
+        current_user.role != UserRole.ADMIN
+        and employee.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized",
         )
 
     return employee

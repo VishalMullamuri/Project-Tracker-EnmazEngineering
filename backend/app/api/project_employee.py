@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 
+from app.models.project import Project
+from app.models.employee import Employee
 from app.models.project_employee import ProjectEmployee
 from app.models.user import User
 
@@ -16,7 +18,6 @@ from app.crud.project_employee import (
     get_project_employees,
 )
 
-from app.core.security import get_current_user
 from app.core.permissions import (
     require_manager,
     require_manager_or_project_member,
@@ -38,6 +39,39 @@ def assign(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
+    project = (
+        db.query(Project)
+        .filter(Project.id == data.project_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this project",
+        )
+
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.id == data.employee_id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found",
+        )
+
     return assign_employee(
         db,
         data.project_id,
@@ -55,6 +89,24 @@ def remove(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
+    project = (
+        db.query(Project)
+        .filter(Project.id == data.project_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this project",
+        )
+
     remove_employee(
         db,
         data.project_id,

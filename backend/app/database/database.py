@@ -1,28 +1,38 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config.config import DATABASE_URL
 
-# Create PostgreSQL Engine
-engine = create_engine(
-    DATABASE_URL,
-    echo=False
+
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+metadata = MetaData(
+    naming_convention=NAMING_CONVENTION,
 )
 
-# Create Session Factory
+Base = declarative_base(
+    metadata=metadata,
+)
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+)
+
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
-# Base Class for all Models
-Base = declarative_base()
 
-
-# Dependency for FastAPI
 def get_db():
-
     db = SessionLocal()
 
     try:

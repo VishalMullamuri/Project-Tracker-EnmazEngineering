@@ -103,6 +103,12 @@ def login_user(
             detail="Invalid email or password",
         )
 
+    if not db_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Account is deactivated",
+        )
+
     access_token = create_access_token(
         data={
             "sub": db_user.email,

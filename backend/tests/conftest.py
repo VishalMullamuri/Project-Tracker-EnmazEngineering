@@ -41,12 +41,8 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="session", autouse=True)
 def create_test_database():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
+    # Don't create any tables automatically.
     yield
-
-    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture()

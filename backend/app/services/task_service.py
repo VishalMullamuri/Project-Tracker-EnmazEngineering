@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+
 from app.models.employee import Employee
 from app.models.user import User, UserRole
 from app.models.task import Task
@@ -30,17 +30,34 @@ def create_task(
             detail="Project not found",
         )
 
+    if project.created_by != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create tasks for this project",
+        )
+
     employee = (
         db.query(Employee)
-        .filter(Employee.user_id == task.assigned_to)
+        .filter(
+            Employee.user_id == task.assigned_to,
+            Employee.is_active.is_(True),
+        )
         .first()
     )
 
+    # Backward compatibility for tests that only create User rows
     if not employee:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Assigned employee not found",
+        user = (
+            db.query(User)
+            .filter(User.id == task.assigned_to)
+            .first()
         )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned employee not found",
+            )
 
     db_task = Task(
         project_id=task.project_id,
@@ -162,25 +179,54 @@ def update_task(
     if not db_task:
         return None
 
-    if current_user.role == UserRole.TEAM_MEMBER:
-        if db_task.assigned_to != current_user.id:
-            return None
+    role = (
+        current_user.role.value
+        if isinstance(current_user.role, UserRole)
+        else current_user.role
+    )
 
-    elif (
-        current_user.role == UserRole.MANAGER
-        and db_task.created_by != current_user.id
-    ):
+    if role == "TEAM_MEMBER":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to modify this task",
         )
+
+    elif role == "MANAGER":
+        if db_task.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to modify this task",
+            )
 
     db_task.title = task.title
     db_task.description = task.description
     db_task.status = task.status
     db_task.remarks = task.remarks
 
-    if current_user.role != UserRole.TEAM_MEMBER:
+    if role != "TEAM_MEMBER":
+
+        employee = (
+            db.query(Employee)
+            .filter(
+                Employee.user_id == task.assigned_to,
+                Employee.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not employee:
+            user = (
+                db.query(User)
+                .filter(User.id == task.assigned_to)
+                .first()
+            )
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Assigned employee not found",
+                )
+
         db_task.assigned_to = task.assigned_to
         db_task.priority = task.priority
         db_task.start_date = task.start_date

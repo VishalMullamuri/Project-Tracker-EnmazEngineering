@@ -47,7 +47,11 @@ class User(Base):
     )
 
     role = Column(
-        SqlEnum(UserRole),
+        SqlEnum(
+            UserRole,
+            name="userrole",
+            create_type=False,
+        ),
         nullable=False,
         default=UserRole.TEAM_MEMBER,
     )

@@ -1,8 +1,9 @@
 from sqlalchemy import (
+    Boolean,
     Column,
+    ForeignKey,
     Integer,
     String,
-    ForeignKey,
 )
 from sqlalchemy.orm import relationship
 
@@ -32,6 +33,13 @@ class Employee(Base):
     phone = Column(
         String,
         nullable=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
     )
 
     user_id = Column(

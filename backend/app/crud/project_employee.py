@@ -38,21 +38,16 @@ def remove_employee(
     project_id: int,
     employee_id: int,
 ):
-
-    assignment = (
+    (
         db.query(ProjectEmployee)
         .filter(
             ProjectEmployee.project_id == project_id,
             ProjectEmployee.employee_id == employee_id,
         )
-        .first()
+        .delete(synchronize_session=False)
     )
 
-    if assignment:
-
-        db.delete(assignment)
-        db.commit()
-
+    db.commit()
 
 def get_project_employees(
     db: Session,

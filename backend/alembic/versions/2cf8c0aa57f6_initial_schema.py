@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: d6ab9bf85090
+Revision ID: 2cf8c0aa57f6
 Revises: 
-Create Date: 2026-07-23 17:59:06.725259
+Create Date: 2026-07-24 19:36:15.367974
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd6ab9bf85090'
+revision: str = '2cf8c0aa57f6'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,7 +30,7 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('first_login', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_users'))
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
@@ -39,11 +39,14 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('phone', sa.String(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('user_id')
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name=op.f('fk_employees_created_by_users')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_employees_user_id_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_employees')),
+    sa.UniqueConstraint('email', name=op.f('uq_employees_email')),
+    sa.UniqueConstraint('user_id', name=op.f('uq_employees_user_id'))
     )
     op.create_index(op.f('ix_employees_id'), 'employees', ['id'], unique=False)
     op.create_table('projects',
@@ -56,24 +59,18 @@ def upgrade() -> None:
     sa.Column('end_date', sa.Date(), nullable=False),
     sa.Column('created_by', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name=op.f('fk_projects_created_by_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_projects'))
     )
     op.create_index(op.f('ix_projects_id'), 'projects', ['id'], unique=False)
-    op.create_table(
-    'project_employees',
+    op.create_table('project_employees',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('project_id', sa.Integer(), nullable=False),
     sa.Column('employee_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['employee_id'], ['employees.id']),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id']),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint(
-        'project_id',
-        'employee_id',
-        name='uq_project_employee'
+    sa.ForeignKeyConstraint(['employee_id'], ['employees.id'], name=op.f('fk_project_employees_employee_id_employees')),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_employees_project_id_projects')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_employees'))
     )
-)
     op.create_index(op.f('ix_project_employees_id'), 'project_employees', ['id'], unique=False)
     op.create_table('tasks',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -88,10 +85,10 @@ def upgrade() -> None:
     sa.Column('remarks', sa.String(length=500), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], name=op.f('fk_tasks_assigned_to_users'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name=op.f('fk_tasks_created_by_users')),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_tasks_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_tasks'))
     )
     op.create_index(op.f('ix_tasks_id'), 'tasks', ['id'], unique=False)
     # ### end Alembic commands ###
