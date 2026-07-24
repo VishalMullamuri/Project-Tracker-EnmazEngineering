@@ -8,7 +8,6 @@ import EmployeeDetails from "./pages/EmployeeDetails";
 import ChangePassword from "./pages/ChangePassword";
 import MyWork from "./pages/MyWork";
 function App() {
-  console.log("APP UPDATED");
 
   return (
 

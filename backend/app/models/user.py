@@ -58,9 +58,9 @@ class User(Base):
     )
 
     first_login = Column(
-    Boolean,
-    default=True,
-)
+        Boolean,
+        default=True,
+    )
 
     created_at = Column(
         DateTime(timezone=True),

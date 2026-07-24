@@ -1,6 +1,8 @@
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.database.database import get_db
+from app.models.employee import Employee
 from app.models.project_employee import ProjectEmployee
 from app.core.security import get_current_user
 from app.models.user import User, UserRole
@@ -21,8 +23,7 @@ def require_admin(
 def require_manager(
     current_user: User = Depends(get_current_user),
 ):
-    print("Current User:", current_user.email)
-    print("Current Role:", current_user.role)
+
     if current_user.role not in (
         UserRole.ADMIN,
         UserRole.MANAGER,
@@ -34,9 +35,10 @@ def require_manager(
 
     return current_user
 
+
 def require_manager_or_project_member(
     project_id: int,
-    db=Depends(get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role in (
@@ -45,11 +47,23 @@ def require_manager_or_project_member(
     ):
         return current_user
 
+    employee = (
+        db.query(Employee)
+        .filter(Employee.user_id == current_user.id)
+        .first()
+    )
+
+    if not employee:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
+
     assignment = (
         db.query(ProjectEmployee)
         .filter(
             ProjectEmployee.project_id == project_id,
-            ProjectEmployee.employee_id == current_user.id,
+            ProjectEmployee.employee_id == employee.id,
         )
         .first()
     )

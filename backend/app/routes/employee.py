@@ -18,7 +18,6 @@ from app.crud.employee import (
 )
 
 from app.models.user import User
-from app.core.security import get_current_user
 from app.core.permissions import require_manager
 
 router = APIRouter(
@@ -43,6 +42,7 @@ def create(
     return create_employee(
         db,
         employee,
+        current_user,
     )
 
 
@@ -106,6 +106,7 @@ def update(
         db,
         employee_id,
         employee,
+        current_user,
     )
 
     if not updated:
@@ -132,6 +133,7 @@ def delete(
     success = delete_employee(
         db,
         employee_id,
+        current_user,
     )
 
     if not success:
@@ -141,5 +143,5 @@ def delete(
         )
 
     return {
-        "message": "Employee deleted successfully"
+        "message": "Employee deleted successfully",
     }

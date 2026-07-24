@@ -175,9 +175,10 @@ def remove_task(
     current_user: User = Depends(require_manager),
 ):
     deleted = delete_task(
-        db,
-        task_id,
-    )
+    db,
+    task_id,
+    current_user,
+)
 
     if not deleted:
         raise HTTPException(

@@ -1,8 +1,9 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.project import Project
 from app.models.task import Task
-from app.models.user import User
+from app.models.user import User, UserRole
 
 from app.schemas.project import (
     ProjectCreate,
@@ -148,6 +149,7 @@ def update_project(
     db: Session,
     project_id: int,
     project: ProjectUpdate,
+    current_user: User,
 ):
     db_project = (
         db.query(Project)
@@ -157,6 +159,15 @@ def update_project(
 
     if not db_project:
         return None
+
+    if (
+        current_user.role != UserRole.ADMIN
+        and db_project.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this project",
+        )
 
     for field, value in project.model_dump(exclude_unset=True).items():
         setattr(db_project, field, value)
@@ -175,6 +186,7 @@ def update_project(
 def delete_project(
     db: Session,
     project_id: int,
+    current_user: User,
 ):
     db_project = (
         db.query(Project)
@@ -184,6 +196,15 @@ def delete_project(
 
     if not db_project:
         return False
+
+    if (
+        current_user.role != UserRole.ADMIN
+        and db_project.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this project",
+        )
 
     db.delete(db_project)
     db.commit()

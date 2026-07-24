@@ -1,57 +1,69 @@
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
 from app.models.employee import Employee
 from app.models.user import User, UserRole
-
-from app.schemas.employee import (
-    EmployeeCreate,
-    EmployeeUpdate,
-)
-
-from app.core.security import hash_password
+from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 
 
 def create_employee(
     db: Session,
     employee: EmployeeCreate,
+    current_user: User,
 ):
-
     existing_user = (
         db.query(User)
-        .filter(
-            User.email == employee.email
-        )
+        .filter(User.email == employee.email)
         .first()
     )
 
     if existing_user:
-        raise Exception(
-            "User already exists."
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists.",
         )
 
-    db_user = User(
-        name=employee.name,
-        email=employee.email,
-        password=hash_password(employee.password),
-        role=UserRole.TEAM_MEMBER,
-    )
+    try:
+        db_user = User(
+            name=employee.name,
+            email=employee.email,
+            password=hash_password(employee.password),
+            role=UserRole.TEAM_MEMBER,
+            is_active=True,
+        )
 
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+        db.add(db_user)
+        db.flush()
 
-    db_employee = Employee(
-        name=employee.name,
-        email=employee.email,
-        phone=employee.phone,
-        user_id=db_user.id,
-    )
+        db_employee = Employee(
+            name=employee.name,
+            email=employee.email,
+            phone=employee.phone,
+            user_id=db_user.id,
+            created_by=current_user.id,
+        )
 
-    db.add(db_employee)
-    db.commit()
-    db.refresh(db_employee)
+        db.add(db_employee)
 
-    return db_employee
+        db.commit()
+
+        db.refresh(db_user)
+        db.refresh(db_employee)
+
+        return db_employee
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists.",
+        )
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_all_employees(
@@ -66,9 +78,7 @@ def get_employee(
 ):
     return (
         db.query(Employee)
-        .filter(
-            Employee.id == employee_id
-        )
+        .filter(Employee.id == employee_id)
         .first()
     )
 
@@ -77,6 +87,7 @@ def update_employee(
     db: Session,
     employee_id: int,
     employee: EmployeeUpdate,
+    current_user: User,
 ):
     db_employee = get_employee(
         db,
@@ -86,33 +97,55 @@ def update_employee(
     if not db_employee:
         return None
 
-    db_employee.name = employee.name
-    db_employee.email = employee.email
-    db_employee.phone = employee.phone
+    if (
+        current_user.role != UserRole.ADMIN
+        and db_employee.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this employee",
+        )
+
+    update_data = employee.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(db_employee, field, value)
 
     if db_employee.user_id:
-
         db_user = (
             db.query(User)
-            .filter(
-                User.id == db_employee.user_id
-            )
+            .filter(User.id == db_employee.user_id)
             .first()
         )
 
         if db_user:
-            db_user.name = employee.name
-            db_user.email = employee.email
+            if "name" in update_data:
+                db_user.name = update_data["name"]
 
-    db.commit()
-    db.refresh(db_employee)
+            if "email" in update_data:
+                db_user.email = update_data["email"]
 
-    return db_employee
+    try:
+        db.commit()
+        db.refresh(db_employee)
+        return db_employee
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists.",
+        )
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 def delete_employee(
     db: Session,
     employee_id: int,
+    current_user: User,
 ):
     db_employee = get_employee(
         db,
@@ -122,21 +155,29 @@ def delete_employee(
     if not db_employee:
         return False
 
-    if db_employee.user_id:
+    if (
+        current_user.role != UserRole.ADMIN
+        and db_employee.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this employee",
+        )
 
+    if db_employee.user_id:
         db_user = (
             db.query(User)
-            .filter(
-                User.id == db_employee.user_id
-            )
+            .filter(User.id == db_employee.user_id)
             .first()
         )
 
         if db_user:
-            db.delete(db_user)
+            db_user.is_active = False
 
-    db.delete(db_employee)
+    try:
+        db.commit()
+        return True
 
-    db.commit()
-
-    return True
+    except Exception:
+        db.rollback()
+        raise

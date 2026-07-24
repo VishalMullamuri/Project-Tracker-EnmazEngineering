@@ -114,10 +114,11 @@ def edit_project(
     current_user: User = Depends(require_manager),
 ):
     updated_project = update_project(
-        db,
-        project_id,
-        project,
-    )
+    db,
+    project_id,
+    project,
+    current_user,
+)
 
     if not updated_project:
         raise HTTPException(
@@ -141,9 +142,10 @@ def remove_project(
     current_user: User = Depends(require_manager),
 ):
     deleted = delete_project(
-        db,
-        project_id,
-    )
+    db,
+    project_id,
+    current_user,
+)
 
     if not deleted:
         raise HTTPException(

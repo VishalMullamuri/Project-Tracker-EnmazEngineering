@@ -41,4 +41,13 @@ class Employee(Base):
         nullable=True,
     )
 
-    user = relationship("User")
+    created_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+    )

@@ -112,7 +112,6 @@ const ManageTeamModal = ({
 
   try {
 
-    console.log("Selected before save:", selected);
 
     const token =
       localStorage.getItem("token");
@@ -127,20 +126,12 @@ const ManageTeamModal = ({
         }
       );
 
-    console.log(
-      "Current members:",
-      current.data
-    );
 
     for (const member of current.data) {
 
-      console.log(
-        "Removing:",
-        member.employee_id
-      );
 
       await api.delete(
-        "/project-employees/",
+  "/project-employees",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -157,13 +148,10 @@ const ManageTeamModal = ({
 
     for (const id of selected) {
 
-      console.log(
-        "Adding:",
-        id
-      );
+
 
       await api.post(
-        "/project-employees/",
+  "/project-employees",
         {
           project_id: projectId,
           employee_id: id,

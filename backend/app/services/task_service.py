@@ -1,6 +1,8 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 from app.models.employee import Employee
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.task import Task
 from app.models.project import Project
 from app.services.project_service import calculate_progress
@@ -16,6 +18,30 @@ def create_task(
     task: TaskCreate,
     user_id: int,
 ):
+    project = (
+        db.query(Project)
+        .filter(Project.id == task.project_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    employee = (
+        db.query(Employee)
+        .filter(Employee.user_id == task.assigned_to)
+        .first()
+    )
+
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assigned employee not found",
+        )
+
     db_task = Task(
         project_id=task.project_id,
         assigned_to=task.assigned_to,
@@ -39,14 +65,7 @@ def create_task(
     db.commit()
     db.refresh(db_task)
 
-    project = (
-        db.query(Project)
-        .filter(Project.id == db_task.project_id)
-        .first()
-    )
-
-    if project:
-        db_task.project_name = project.project_name
+    db_task.project_name = project.project_name
 
     return db_task
 
@@ -55,7 +74,6 @@ def get_all_tasks(
     db: Session,
     current_user: User,
 ):
-
     query = (
         db.query(
             Task,
@@ -73,7 +91,6 @@ def get_all_tasks(
     )
 
     if current_user.role.value not in ["MANAGER", "ADMIN"]:
-
         query = query.filter(
             Task.assigned_to == current_user.id
         )
@@ -83,10 +100,8 @@ def get_all_tasks(
     result = []
 
     for task, project_name, employee_name in tasks:
-
         task.project_name = project_name
         task.assigned_to_name = employee_name
-
         result.append(task)
 
     return result
@@ -147,25 +162,29 @@ def update_task(
     if not db_task:
         return None
 
-    if current_user.role.value == "TEAM_MEMBER":
+    if current_user.role == UserRole.TEAM_MEMBER:
         if db_task.assigned_to != current_user.id:
             return None
 
-    if current_user.role.value in ["MANAGER", "ADMIN"]:
+    elif (
+        current_user.role == UserRole.MANAGER
+        and db_task.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this task",
+        )
 
-        db_task.title = task.title
-        db_task.description = task.description
+    db_task.title = task.title
+    db_task.description = task.description
+    db_task.status = task.status
+    db_task.remarks = task.remarks
+
+    if current_user.role != UserRole.TEAM_MEMBER:
         db_task.assigned_to = task.assigned_to
-        db_task.status = task.status
         db_task.priority = task.priority
-        db_task.remarks = task.remarks
         db_task.start_date = task.start_date
         db_task.due_date = task.due_date
-
-    else:
-
-        db_task.status = task.status
-        db_task.remarks = task.remarks
 
     db.flush()
 
@@ -192,6 +211,7 @@ def update_task(
 def delete_task(
     db: Session,
     task_id: int,
+    current_user: User,
 ):
     db_task = (
         db.query(Task)
@@ -201,6 +221,15 @@ def delete_task(
 
     if not db_task:
         return False
+
+    if (
+        current_user.role == UserRole.MANAGER
+        and db_task.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this task",
+        )
 
     project_id = db_task.project_id
 

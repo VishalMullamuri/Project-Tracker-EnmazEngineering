@@ -165,3 +165,52 @@ def test_get_my_work(
     )
 
     assert response.status_code == 200
+
+def test_team_member_cannot_update_other_users_task(
+    client,
+    manager_headers,
+    employee_headers,
+    employee_user,
+):
+    task = create_task(
+        client,
+        manager_headers,
+        employee_user,
+    )
+
+    response = client.put(
+        f"/tasks/{task['id']}",
+        headers=employee_headers,
+        json={
+            "title": "Hack",
+            "description": "Hack",
+            "assigned_to": employee_user.id,
+            "status": "Completed",
+            "priority": "High",
+            "remarks": "Hack",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_team_member_cannot_delete_task(
+    client,
+    manager_headers,
+    employee_headers,
+    employee_user,
+):
+    task = create_task(
+        client,
+        manager_headers,
+        employee_user,
+    )
+
+    response = client.delete(
+        f"/tasks/{task['id']}",
+        headers=employee_headers,
+    )
+
+    assert response.status_code == 403

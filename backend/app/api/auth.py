@@ -180,7 +180,6 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    print("AUTH FILE LOADED - CHANGE PASSWORD ROUTE REGISTERED")
 
     if not verify_password(
         data.current_password,

@@ -55,9 +55,8 @@ const EmployeeTable = ({
       const token =
         localStorage.getItem("token");
       
-      console.log(employee);
       await api.post(
-        "/employees/",
+  "/employees",
         employee,
         {
           headers: {
