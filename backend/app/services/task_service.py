@@ -195,24 +195,32 @@ def update_task(
     )
 
     if role == "TEAM_MEMBER":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this task",
-        )
+
+        if db_task.assigned_to != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to modify this task",
+            )
 
     elif role == "MANAGER":
+
         if db_task.created_by != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to modify this task",
             )
 
-    db_task.title = task.title
-    db_task.description = task.description
-    db_task.status = task.status
-    db_task.remarks = task.remarks
+    if role == "TEAM_MEMBER":
 
-    if role != "TEAM_MEMBER":
+        db_task.status = task.status
+        db_task.remarks = task.remarks
+
+    else:
+
+        db_task.title = task.title
+        db_task.description = task.description
+        db_task.status = task.status
+        db_task.remarks = task.remarks
 
         employee = (
             db.query(Employee)

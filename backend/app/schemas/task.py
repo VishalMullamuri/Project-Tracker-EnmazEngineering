@@ -13,14 +13,14 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    assigned_to: int
-    title: str
-    description: str
+    assigned_to: int | None = None
+    title: str | None = None
+    description: str | None = None
     status: str
-    priority: str
+    priority: str | None = None
     remarks: str | None = None
-    start_date: date
-    due_date: date
+    start_date: date | None = None
+    due_date: date | None = None
 
 
 class TaskResponse(BaseModel):
