@@ -19,7 +19,7 @@ from app.crud.employee import (
 
 from app.models.user import User, UserRole
 from app.models.employee import Employee
-from app.core.permissions import require_manager
+from app.core.permissions import require_admin, require_manager
 
 router = APIRouter(
     prefix="/employees",
@@ -28,7 +28,7 @@ router = APIRouter(
 
 
 # ----------------------------------
-# Create Employee (Manager Only)
+# Create Employee (Admin Only)
 # ----------------------------------
 
 @router.post(
@@ -38,7 +38,7 @@ router = APIRouter(
 def create(
     employee: EmployeeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(require_admin),
 ):
     return create_employee(
         db,
@@ -59,18 +59,7 @@ def get_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    if current_user.role == UserRole.ADMIN:
-        return get_all_employees(db)
-
-    return (
-        db.query(Employee)
-        .filter(
-            Employee.created_by == current_user.id,
-            Employee.is_active.is_(True),
-        )
-        .all()
-    )
-
+    return get_all_employees(db)
 
 # ----------------------------------
 # Get Single Employee
@@ -109,7 +98,7 @@ def get(
 
 
 # ----------------------------------
-# Update Employee (Manager Only)
+# Update Employee
 # ----------------------------------
 
 @router.put(
@@ -139,7 +128,7 @@ def update(
 
 
 # ----------------------------------
-# Delete Employee (Manager Only)
+# Delete Employee (Admin Only)
 # ----------------------------------
 
 @router.delete(
@@ -148,7 +137,7 @@ def update(
 def delete(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(require_admin),
 ):
     success = delete_employee(
         db,

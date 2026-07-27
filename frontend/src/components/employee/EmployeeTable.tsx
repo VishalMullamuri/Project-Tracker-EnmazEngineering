@@ -40,50 +40,49 @@ const EmployeeTable = ({
 
   const employeesPerPage = 5;
 
-  const createEmployee = async (
-  employee: {
-    name: string;
-    email: string;
-    phone: string;
-    password: string;
-    role: "MANAGER" | "TEAM_MEMBER";
+  const createEmployee = async (employee: {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: "MANAGER" | "TEAM_MEMBER";
+}) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    console.log("Creating employee...");
+
+    const response = await api.post(
+      "/employees/",
+      employee,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("Employee created:", response.data);
+
+    console.log("Refreshing employees...");
+    await refreshEmployees();
+
+    console.log("Refreshing dashboard...");
+    await refreshDashboard();
+
+    setOpenModal(false);
+  } catch (error: any) {
+    console.error(error);
+
+    console.log("Response:", error.response?.data);
+
+    alert(
+      error.response?.data?.detail ||
+      error.message ||
+      "Failed to create employee."
+    );
   }
-) => {
-
-    try {
-
-      const token =
-        localStorage.getItem("token");
-      
-      await api.post(
-  "/employees",
-        employee,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      await Promise.all([
-  refreshEmployees(),
-  refreshDashboard(),
-]);
-
-
-      setOpenModal(false);
-
-    } catch (error) {
-
-      console.error(error);
-
-      alert(
-        "Failed to create employee."
-      );
-
-    }
-
-  };
+};
 
   const filteredEmployees =
     employees.filter((employee) => {
@@ -124,6 +123,12 @@ const EmployeeTable = ({
     filteredEmployees.length /
       employeesPerPage
   );
+
+  const user = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  const isAdmin = user.role === "ADMIN";
 
   return (
 
@@ -182,22 +187,22 @@ const EmployeeTable = ({
 
           </div>
 
-          <button
-            onClick={() =>
-              setOpenModal(true)
-            }
-            className="
-              px-4
-              py-2
-              bg-blue-600
-              text-white
-              rounded-lg
-              hover:bg-blue-700
-              transition
-            "
-          >
-            + Add Employee
-          </button>
+          {isAdmin && (
+  <button
+    onClick={() => setOpenModal(true)}
+    className="
+      px-4
+      py-2
+      bg-blue-600
+      text-white
+      rounded-lg
+      hover:bg-blue-700
+      transition
+    "
+  >
+    + Add Employee
+  </button>
+)}
 
         </div>
                 {/* Table */}

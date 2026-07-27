@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 
 from app.core.permissions import require_manager
 
@@ -17,7 +17,14 @@ def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    users = db.query(User).all()
+    if current_user.role == UserRole.ADMIN:
+        users = db.query(User).all()
+    else:
+        users = (
+            db.query(User)
+            .filter(User.id == current_user.id)
+            .all()
+        )
 
     return [
         {

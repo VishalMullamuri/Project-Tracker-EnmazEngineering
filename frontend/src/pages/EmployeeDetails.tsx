@@ -288,46 +288,40 @@ const EmployeeDetails = () => {
 
   const deleteEmployee = async () => {
 
-    if (!employee) return;
+  if (!employee) return;
 
-    const confirmDelete =
-      window.confirm(
-        "Are you sure you want to delete this employee?"
-      );
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this employee?"
+  );
 
-    if (!confirmDelete) return;
+  if (!confirmDelete) return;
 
-    try {
+  try {
 
-      const token =
-        localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      await api.delete(
-        `/employees/${employee.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    await api.delete(
+      `/employees/${employee.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-      alert(
-        "Employee deleted successfully."
-      );
+    alert("Employee deleted successfully.");
 
-      navigate("/admin");
+    navigate("/admin");
 
-    } catch (error) {
+  } catch (error) {
 
-      console.error(error);
+    console.error(error);
 
-      alert(
-        "Failed to delete employee."
-      );
+    alert("Failed to delete employee.");
 
-    }
+  }
 
-  };
+};
 
   const indexOfLastProject =
     currentPage * projectsPerPage;
@@ -367,6 +361,9 @@ const EmployeeDetails = () => {
       </Layout>
     );
   }
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user.role === "ADMIN";
 
   return (
 
@@ -465,27 +462,28 @@ const EmployeeDetails = () => {
 
             </button>
 
-            <button
-              onClick={deleteEmployee}
-              className="
-                flex
-                items-center
-                gap-2
-                px-4
-                py-2
-                rounded-lg
-                bg-red-600
-                text-white
-                hover:bg-red-700
-                transition
-              "
-            >
+            {isAdmin && (
+  <button
+    onClick={deleteEmployee}
+    className="
+      flex
+      items-center
+      gap-2
+      px-4
+      py-2
+      rounded-lg
+      bg-red-600
+      text-white
+      hover:bg-red-700
+      transition
+    "
+  >
+    <Trash2 size={16} />
+    Delete
+  </button>
+)}
 
-              <Trash2 size={16} />
 
-              Delete
-
-            </button>
 
           </div>
 

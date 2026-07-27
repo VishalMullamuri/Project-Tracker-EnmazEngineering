@@ -33,7 +33,7 @@ def create_employee(
             name=employee.name,
             email=employee.email,
             password=hash_password(employee.password),
-            role=UserRole.TEAM_MEMBER,
+            role=employee.role,
             is_active=True,
         )
 

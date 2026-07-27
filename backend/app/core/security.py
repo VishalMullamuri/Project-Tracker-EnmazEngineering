@@ -6,7 +6,8 @@ from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
 )
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -94,21 +95,21 @@ def get_current_user(
             algorithms=[ALGORITHM],
         )
 
-        email = payload.get("sub")
+        user_id = payload.get("sub")
+        token_version = payload.get("token_version")
 
-        if email is None:
+        if user_id is None or token_version is None:
             raise credentials_exception
 
-    except JWTError:
+    except InvalidTokenError:
         raise credentials_exception
 
     user = (
         db.query(User)
-        .filter(User.email == email)
+        .filter(User.id == int(user_id))
         .first()
     )
-
-    if user is None:
+    if user.token_version != token_version:
         raise credentials_exception
 
     if not user.is_active:

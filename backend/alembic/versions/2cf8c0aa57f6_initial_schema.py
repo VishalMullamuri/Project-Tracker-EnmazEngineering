@@ -29,6 +29,12 @@ def upgrade() -> None:
     sa.Column('role', sa.Enum('ADMIN', 'MANAGER', 'TEAM_MEMBER', name='userrole'), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('first_login', sa.Boolean(), nullable=True),
+    sa.Column(
+    "token_version",
+    sa.Integer(),
+    nullable=False,
+    server_default="0",
+),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_users'))
     )
@@ -65,10 +71,27 @@ def upgrade() -> None:
     op.create_index(op.f('ix_projects_id'), 'projects', ['id'], unique=False)
     op.create_table('project_employees',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('employee_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['employee_id'], ['employees.id'], name=op.f('fk_project_employees_employee_id_employees')),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_employees_project_id_projects')),
+    sa.Column("project_id", sa.Integer(), nullable=False),
+    sa.Column("employee_id", sa.Integer(), nullable=False),
+
+    sa.UniqueConstraint(
+        "project_id",
+        "employee_id",
+        name="uq_project_employee",
+    ),
+    sa.ForeignKeyConstraint(
+        ['employee_id'],
+        ['employees.id'],
+        name=op.f('fk_project_employees_employee_id_employees'),
+        ondelete='CASCADE',
+    ),
+
+    sa.ForeignKeyConstraint(
+        ['project_id'],
+        ['projects.id'],
+        name=op.f('fk_project_employees_project_id_projects'),
+        ondelete='CASCADE',
+    ),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_project_employees'))
     )
     op.create_index(op.f('ix_project_employees_id'), 'project_employees', ['id'], unique=False)

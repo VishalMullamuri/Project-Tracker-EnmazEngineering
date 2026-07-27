@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.project import router as project_router
@@ -13,6 +14,9 @@ app = FastAPI(
     title="Project Tracker API",
     description="Backend API for Project Tracker",
     version="1.0.0",
+    docs_url="/docs" if os.getenv("ENV") != "production" else None,
+    redoc_url="/redoc" if os.getenv("ENV") != "production" else None,
+    openapi_url="/openapi.json" if os.getenv("ENV") != "production" else None,
 )
 
 # CORS Configuration

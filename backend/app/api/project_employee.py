@@ -6,7 +6,7 @@ from app.database.database import get_db
 from app.models.project import Project
 from app.models.employee import Employee
 from app.models.project_employee import ProjectEmployee
-from app.models.user import User
+from app.models.user import User, UserRole
 
 from app.schemas.project_employee import (
     ProjectEmployeeCreate,
@@ -51,7 +51,10 @@ def assign(
             detail="Project not found",
         )
 
-    if project.created_by != current_user.id:
+    if (
+        current_user.role != UserRole.ADMIN
+        and project.created_by != current_user.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to modify this project",
@@ -101,11 +104,14 @@ def remove(
             detail="Project not found",
         )
 
-    if project.created_by != current_user.id:
+    if (
+        current_user.role != UserRole.ADMIN
+        and project.created_by != current_user.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to modify this project",
-        )
+    )
 
     remove_employee(
         db,

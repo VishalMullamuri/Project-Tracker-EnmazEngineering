@@ -30,7 +30,16 @@ def create_task(
             detail="Project not found",
         )
 
-    if project.created_by != user_id:
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if (
+        user.role != UserRole.ADMIN
+        and project.created_by != user_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to create tasks for this project",

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from app.models.user import UserRole
 
 
 class EmployeeBase(BaseModel):
@@ -9,6 +10,7 @@ class EmployeeCreate(EmployeeBase):
     name: str
     email: EmailStr
     password: str
+    role: UserRole = UserRole.TEAM_MEMBER
 
 
 class EmployeeUpdate(BaseModel):

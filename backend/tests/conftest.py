@@ -39,9 +39,14 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+from alembic import command
+from alembic.config import Config
+
+
 @pytest.fixture(scope="session", autouse=True)
 def create_test_database():
-    # Don't create any tables automatically.
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
     yield
 
 
