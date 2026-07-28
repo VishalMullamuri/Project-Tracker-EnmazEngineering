@@ -101,15 +101,18 @@ def get_current_user(
         if user_id is None or token_version is None:
             raise credentials_exception
 
-    except InvalidTokenError:
+        user_id = int(user_id)
+
+    except (InvalidTokenError, ValueError, TypeError):
         raise credentials_exception
 
     user = (
         db.query(User)
-        .filter(User.id == int(user_id))
+        .filter(User.id == user_id)
         .first()
     )
-    if user.token_version != token_version:
+
+    if user is None or user.token_version != token_version:
         raise credentials_exception
 
     if not user.is_active:

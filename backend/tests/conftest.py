@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+from app.models.employee import Employee
 import pytest
 from sqlalchemy.engine.url import make_url
 
@@ -128,9 +128,9 @@ def manager_user(db):
 
 
 @pytest.fixture()
-def employee_user(db):
+def employee_user(db, manager_user):
 
-    employee = User(
+    user = User(
         name="Employee",
         email="employee@test.com",
         password=hash_password("Employee@123"),
@@ -139,11 +139,23 @@ def employee_user(db):
         first_login=False,
     )
 
+    db.add(user)
+    db.flush()
+
+    employee = Employee(
+        name=user.name,
+        email=user.email,
+        phone="9876543210",
+        user_id=user.id,
+        created_by=manager_user.id,
+        is_active=True,
+    )
+
     db.add(employee)
     db.commit()
-    db.refresh(employee)
+    db.refresh(user)
 
-    return employee
+    return user
 
 
 @pytest.fixture()

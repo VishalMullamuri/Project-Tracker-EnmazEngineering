@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from typing import Annotated
+from pydantic import BaseModel, EmailStr, Field
 from app.models.user import UserRole
 
 
@@ -9,7 +10,7 @@ class EmployeeBase(BaseModel):
 class EmployeeCreate(EmployeeBase):
     name: str
     email: EmailStr
-    password: str
+    password: Annotated[str, Field(min_length=12, max_length=72)]
     role: UserRole = UserRole.TEAM_MEMBER
 
 

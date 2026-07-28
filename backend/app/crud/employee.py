@@ -185,6 +185,7 @@ def delete_employee(
 
         if db_user:
             db_user.is_active = False
+            db_user.token_version += 1
 
     try:
         db.commit()

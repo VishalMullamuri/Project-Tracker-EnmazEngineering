@@ -66,8 +66,14 @@ def assign(
             Employee.id == data.employee_id,
             Employee.is_active.is_(True),
         )
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        employee = employee.filter(
+            Employee.created_by == current_user.id
+        )
+
+    employee = employee.first()
 
     if not employee:
         raise HTTPException(
@@ -133,10 +139,20 @@ def get_all_assignments(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    return (
-        db.query(ProjectEmployee)
-        .all()
-    )
+    query = db.query(ProjectEmployee)
+
+    if current_user.role != UserRole.ADMIN:
+        query = (
+            query.join(
+                Project,
+                Project.id == ProjectEmployee.project_id,
+            )
+            .filter(
+                Project.created_by == current_user.id
+            )
+        )
+
+    return query.all()
 
 
 # ----------------------------------

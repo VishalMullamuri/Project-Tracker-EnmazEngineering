@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.user import User, UserRole
-
+from app.models.employee import Employee
 from app.core.permissions import require_manager
 
 router = APIRouter(
@@ -18,11 +18,20 @@ def get_users(
     current_user: User = Depends(require_manager),
 ):
     if current_user.role == UserRole.ADMIN:
-        users = db.query(User).all()
+        users = (
+            db.query(User)
+            .filter(User.is_active.is_(True))
+            .all()
+        )
     else:
         users = (
             db.query(User)
-            .filter(User.id == current_user.id)
+            .join(Employee, Employee.user_id == User.id)
+            .filter(
+                Employee.created_by == current_user.id,
+                Employee.is_active.is_(True),
+                User.is_active.is_(True),
+            )
             .all()
         )
 

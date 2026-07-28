@@ -19,6 +19,8 @@ from app.core.security import (
     get_current_user,
 )
 
+from passlib.context import CryptContext
+
 from app.core.permissions import (
     require_admin,
     require_manager,
@@ -29,7 +31,14 @@ router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+)
 
+DUMMY_PASSWORD_HASH = pwd_context.hash(
+    "dummy-password-for-timing"
+)
 
 # -----------------------------------
 # Register User
@@ -89,6 +98,11 @@ def login_user(
     )
 
     if not db_user:
+        verify_password(
+            user.password,
+            DUMMY_PASSWORD_HASH,
+        )
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
@@ -202,6 +216,7 @@ def change_password(
     )
 
     current_user.first_login = False
+    current_user.token_version += 1
 
     db.commit()
 

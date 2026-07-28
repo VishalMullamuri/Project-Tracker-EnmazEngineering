@@ -51,7 +51,7 @@ def calculate_progress(
 
     if progress == 100:
         project.status = "Completed"
-    elif project.status == "Completed":
+    elif progress > 0 and project.status == "Not Started":
         project.status = "In Progress"
 
     return progress
@@ -99,11 +99,19 @@ def get_all_projects(
             .all()
         )
 
+    updated = False
+
     for project in projects:
         calculate_progress(
             db,
             project.id,
         )
+        updated = True
+
+    if updated:
+        db.commit()
+
+    for project in projects:
         db.refresh(project)
 
     return projects
@@ -140,6 +148,7 @@ def get_project_by_id(
         project.id,
     )
 
+    db.commit()
     db.refresh(project)
 
     return project

@@ -14,9 +14,9 @@ app = FastAPI(
     title="Project Tracker API",
     description="Backend API for Project Tracker",
     version="1.0.0",
-    docs_url="/docs" if os.getenv("ENV") != "production" else None,
-    redoc_url="/redoc" if os.getenv("ENV") != "production" else None,
-    openapi_url="/openapi.json" if os.getenv("ENV") != "production" else None,
+    docs_url=None if os.getenv("ENV", "production") == "production" else "/docs",
+    redoc_url=None if os.getenv("ENV", "production") == "production" else "/redoc",
+    openapi_url=None if os.getenv("ENV", "production") == "production" else "/openapi.json",
 )
 
 # CORS Configuration

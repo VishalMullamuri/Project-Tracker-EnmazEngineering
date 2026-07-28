@@ -54,19 +54,11 @@ def create_task(
         .first()
     )
 
-    # Backward compatibility for tests that only create User rows
     if not employee:
-        user = (
-            db.query(User)
-            .filter(User.id == task.assigned_to)
-            .first()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assigned employee not found",
         )
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assigned employee not found",
-            )
 
     db_task = Task(
         project_id=task.project_id,
@@ -210,44 +202,33 @@ def update_task(
                 detail="Not authorized to modify this task",
             )
 
+    update_data = task.model_dump(exclude_unset=True)
+
     if role == "TEAM_MEMBER":
+        update_data = {
+            key: value
+            for key, value in update_data.items()
+            if key in {"status", "remarks"}
+        }
 
-        db_task.status = task.status
-        db_task.remarks = task.remarks
-
-    else:
-
-        db_task.title = task.title
-        db_task.description = task.description
-        db_task.status = task.status
-        db_task.remarks = task.remarks
-
+    if "assigned_to" in update_data:
         employee = (
             db.query(Employee)
             .filter(
-                Employee.user_id == task.assigned_to,
+                Employee.user_id == update_data["assigned_to"],
                 Employee.is_active.is_(True),
             )
             .first()
         )
 
         if not employee:
-            user = (
-                db.query(User)
-                .filter(User.id == task.assigned_to)
-                .first()
-            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned employee not found",
+        )
 
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Assigned employee not found",
-                )
-
-        db_task.assigned_to = task.assigned_to
-        db_task.priority = task.priority
-        db_task.start_date = task.start_date
-        db_task.due_date = task.due_date
+    for field, value in update_data.items():
+        setattr(db_task, field, value)
 
     db.flush()
 

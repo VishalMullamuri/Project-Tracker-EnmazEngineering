@@ -212,3 +212,82 @@ def test_team_member_cannot_delete_task(
     )
 
     assert response.status_code == 403
+
+def test_manager_partial_update(
+    client,
+    manager_headers,
+    employee_user,
+):
+    task = create_task(
+        client,
+        manager_headers,
+        employee_user,
+    )
+
+    response = client.put(
+        f"/tasks/{task['id']}",
+        headers=manager_headers,
+        json={
+            "status": "Completed",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "Completed"
+    assert response.json()["title"] == task["title"]
+    assert response.json()["description"] == task["description"]
+
+
+def test_team_member_cannot_update_others_task(
+    client,
+    manager_headers,
+    manager_user,
+    employee_headers,
+    employee_user,
+    db,
+):
+    from app.models.user import User, UserRole
+    from app.core.security import hash_password
+
+    other_user = User(
+        name="Other Employee",
+        email="other@test.com",
+        password=hash_password("OtherEmployee@123"),
+        role=UserRole.TEAM_MEMBER,
+        is_active=True,
+        first_login=False,
+    )
+
+    from app.models.employee import Employee
+
+    db.add(other_user)
+    db.flush()
+
+    other_employee = Employee(
+        name=other_user.name,
+        email=other_user.email,
+        phone="9999999999",
+        user_id=other_user.id,
+        created_by=manager_user.id,  # replace in next step
+        is_active=True,
+    )
+
+    db.add(other_employee)
+    db.commit()
+    db.refresh(other_user)
+
+    task = create_task(
+        client,
+        manager_headers,
+        other_user,
+    )
+
+    response = client.put(
+        f"/tasks/{task['id']}",
+        headers=employee_headers,
+        json={
+            "status": "Completed",
+        },
+    )
+
+    assert response.status_code == 403
