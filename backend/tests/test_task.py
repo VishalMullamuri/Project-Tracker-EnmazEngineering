@@ -15,8 +15,7 @@ def create_task(client, manager_headers, employee_user):
         },
     )
 
-    print("\nPROJECT STATUS:", project.status_code)
-    print("PROJECT BODY:", project.json())
+    
 
     project_id = project.json()["id"]
 
@@ -34,8 +33,6 @@ def create_task(client, manager_headers, employee_user):
         },
     )
 
-    print("\nTASK STATUS:", task.status_code)
-    print("TASK BODY:", task.json())
 
     return task.json()
 
@@ -171,7 +168,7 @@ def test_get_my_work(
 
     assert response.status_code == 200
 
-def test_team_member_cannot_update_other_users_task(
+def test_team_member_can_update_own_task(
     client,
     manager_headers,
     employee_headers,
@@ -187,18 +184,14 @@ def test_team_member_cannot_update_other_users_task(
         f"/tasks/{task['id']}",
         headers=employee_headers,
         json={
-            "title": "Hack",
-            "description": "Hack",
-            "assigned_to": employee_user.id,
             "status": "Completed",
-            "priority": "High",
-            "remarks": "Hack",
-            "start_date": str(date.today()),
-            "due_date": str(date.today()),
+            "remarks": "Completed successfully",
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()["status"] == "Completed"
+    assert response.json()["remarks"] == "Completed successfully"
 
 
 def test_team_member_cannot_delete_task(

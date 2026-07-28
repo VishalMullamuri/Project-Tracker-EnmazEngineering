@@ -9,6 +9,10 @@ if "GITHUB_ACTIONS" in os.environ:
         "postgresql://postgres:postgres@localhost:5432/project_tracker_test"
     )
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 url = os.environ.get("TEST_DATABASE_URL")
 
 if not url or not make_url(url).database.endswith("_test"):
