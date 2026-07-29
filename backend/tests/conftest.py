@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
-from app.models.employee import Employee
 import pytest
 from sqlalchemy.engine.url import make_url
+from app.core.rate_limit import limiter
 
 if "GITHUB_ACTIONS" in os.environ:
     os.environ["TEST_DATABASE_URL"] = (
@@ -21,6 +21,8 @@ if not url or not make_url(url).database.endswith("_test"):
     )
 
 os.environ["DATABASE_URL"] = url
+
+from app.models.employee import Employee
 
 from fastapi.testclient import TestClient
 import pytest
@@ -82,11 +84,13 @@ def client(db):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    limiter.enabled = False
 
     with TestClient(app) as client:
         yield client
 
     app.dependency_overrides.clear()
+    limiter.enabled = True
 
 
 @pytest.fixture()
@@ -128,7 +132,7 @@ def manager_user(db):
 
 
 @pytest.fixture()
-def employee_user(db, manager_user):
+def employee_user(db, admin_user):
 
     user = User(
         name="Employee",
@@ -147,7 +151,7 @@ def employee_user(db, manager_user):
         email=user.email,
         phone="9876543210",
         user_id=user.id,
-        created_by=manager_user.id,
+        created_by=admin_user.id,
         is_active=True,
     )
 

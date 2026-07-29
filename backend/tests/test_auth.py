@@ -80,10 +80,11 @@ def test_change_password(
 
     assert response.status_code == 200
 
-    assert (
-        response.json()["message"]
-        == "Password changed successfully"
-    )
+    data = response.json()
+
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["first_login"] is False
 
 
 def test_token_invalid_after_password_change(
@@ -123,7 +124,22 @@ def test_token_invalid_after_password_change(
     assert response.status_code == 401
 
 
-def test_old_password_no_longer_works(client):
+def test_old_password_no_longer_works(
+    client,
+    admin_headers,
+    admin_user,
+):
+    response = client.put(
+        "/auth/change-password",
+        headers=admin_headers,
+        json={
+            "current_password": "Admin@123",
+            "new_password": "NewAdmin@123",
+        },
+    )
+
+    assert response.status_code == 200
+
     response = client.post(
         "/auth/login",
         json={
@@ -178,7 +194,8 @@ def test_token_for_deleted_user(
 
     token = login_response.json()["access_token"]
 
-    db.delete(admin_user)
+    admin_user.is_active = False
+    admin_user.token_version += 1
     db.commit()
 
     response = client.get(

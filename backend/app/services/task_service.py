@@ -59,6 +59,11 @@ def create_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Assigned employee not found",
         )
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assigned employee not found",
+        )
 
     db_task = Task(
         project_id=task.project_id,
@@ -108,7 +113,15 @@ def get_all_tasks(
         )
     )
 
-    if current_user.role.value not in ["MANAGER", "ADMIN"]:
+    if current_user.role == UserRole.ADMIN:
+        pass
+
+    elif current_user.role == UserRole.MANAGER:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    else:
         query = query.filter(
             Task.assigned_to == current_user.id
         )
@@ -147,7 +160,15 @@ def get_task(
         .filter(Task.id == task_id)
     )
 
-    if current_user.role.value not in ["MANAGER", "ADMIN"]:
+    if current_user.role == UserRole.ADMIN:
+        pass
+
+    elif current_user.role == UserRole.MANAGER:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    else:
         query = query.filter(
             Task.assigned_to == current_user.id
         )
@@ -178,7 +199,10 @@ def update_task(
     )
 
     if not db_task:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
 
     role = (
         current_user.role.value
@@ -225,7 +249,7 @@ def update_task(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Assigned employee not found",
-        )
+            )
 
     for field, value in update_data.items():
         setattr(db_task, field, value)

@@ -28,7 +28,6 @@ def get_users(
             db.query(User)
             .join(Employee, Employee.user_id == User.id)
             .filter(
-                Employee.created_by == current_user.id,
                 Employee.is_active.is_(True),
                 User.is_active.is_(True),
             )

@@ -3,7 +3,6 @@ import { useState } from "react";
 export type CreateProject = {
   project_name: string;
   description: string;
-  status: string;
   start_date: string;
   end_date: string;
 };
@@ -22,8 +21,6 @@ const AddProjectModal = ({
 
   const [projectName, setProjectName] = useState("");
 
-  const [status, setStatus] =
-  useState("Not Started");
 
   const [description, setDescription] = useState("");
 
@@ -63,7 +60,6 @@ const handleSubmit = async () => {
 await onAddProject({
   project_name: projectName,
   description,
-  status,
   start_date: startDate,
   end_date: endDate,
 });
@@ -119,39 +115,7 @@ await onAddProject({
 
 {/* Status */}
 
-<div>
 
-  <label className="block mb-2 font-medium">
-    Status
-  </label>
-
-  <select
-    value={status}
-    onChange={(e) =>
-      setStatus(e.target.value)
-    }
-    className="w-full border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-  >
-
-    <option value="Not Started">
-      Not Started
-    </option>
-
-    <option value="In Progress">
-      In Progress
-    </option>
-
-    <option value="Completed">
-      Completed
-    </option>
-
-    <option value="Delayed">
-      Delayed
-    </option>
-
-  </select>
-
-</div>
 
           {/* Start Date */}
 

@@ -5,7 +5,7 @@ from app.database.database import get_db
 
 from app.models.project import Project
 from app.models.task import Task
-from app.models.user import User
+from app.models.user import User, UserRole
 
 from app.core.security import get_current_user
 
@@ -22,10 +22,10 @@ def dashboard_stats(
 ):
 
     # ==========================
-    # ADMIN & MANAGER
+    # ADMIN
     # ==========================
 
-    if current_user.role.value in ["ADMIN", "MANAGER"]:
+    if current_user.role == UserRole.ADMIN:
 
         total_projects = db.query(Project).count()
 
@@ -43,6 +43,37 @@ def dashboard_stats(
 
         delayed_projects = (
             db.query(Project)
+            .filter(Project.status == "Delayed")
+            .count()
+        )
+
+    # ==========================
+    # MANAGER
+    # ==========================
+
+    elif current_user.role == UserRole.MANAGER:
+
+        manager_projects = (
+            db.query(Project)
+            .filter(Project.created_by == current_user.id)
+        )
+
+        total_projects = manager_projects.count()
+
+        completed_projects = (
+            manager_projects
+            .filter(Project.status == "Completed")
+            .count()
+        )
+
+        active_projects = (
+            manager_projects
+            .filter(Project.status == "In Progress")
+            .count()
+        )
+
+        delayed_projects = (
+            manager_projects
             .filter(Project.status == "Delayed")
             .count()
         )

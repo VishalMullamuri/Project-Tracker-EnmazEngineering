@@ -22,7 +22,7 @@ class ChangePassword(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    role: UserRole
+    role: str
     first_login: bool
 
 

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from fastapi import Request
 from app.database.database import get_db
 from app.models.user import User
-
+from app.core.rate_limit import limiter
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -86,7 +86,9 @@ def register_user(
     "/login",
     response_model=Token,
 )
+@limiter.limit("5/minute")
 def login_user(
+    request: Request,
     user: UserLogin,
     db: Session = Depends(get_db),
 ):
@@ -220,6 +222,17 @@ def change_password(
 
     db.commit()
 
+    access_token = create_access_token(
+        data={
+            "sub": str(current_user.id),
+            "role": current_user.role.value,
+            "token_version": current_user.token_version,
+        }
+    )
+
     return {
-        "message": "Password changed successfully"
-    }
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": current_user.role,
+        "first_login": False,
+}

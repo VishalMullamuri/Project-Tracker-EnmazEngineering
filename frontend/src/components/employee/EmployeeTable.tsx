@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import axios from "axios";
 import api from "../../api/axios";
 
 import Pagination from "../dashboard/Pagination";
@@ -50,11 +50,10 @@ const EmployeeTable = ({
   try {
     const token = localStorage.getItem("token");
 
-    console.log("Creating employee...");
 
     const response = await api.post(
-      "/employees/",
-      employee,
+  "/employees",
+  employee,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -62,25 +61,24 @@ const EmployeeTable = ({
       }
     );
 
-    console.log("Employee created:", response.data);
 
-    console.log("Refreshing employees...");
     await refreshEmployees();
 
-    console.log("Refreshing dashboard...");
     await refreshDashboard();
 
     setOpenModal(false);
-  } catch (error: any) {
-    console.error(error);
+  } catch (error) {
 
-    console.log("Response:", error.response?.data);
 
-    alert(
-      error.response?.data?.detail ||
-      error.message ||
-      "Failed to create employee."
-    );
+    if (axios.isAxiosError(error)) {
+      alert(
+        error.response?.data?.detail ??
+        error.message ??
+        "Failed to create employee."
+      );
+    } else {
+      alert("Failed to create employee.");
+    }
   }
 };
 

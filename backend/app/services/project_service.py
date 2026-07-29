@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
+from datetime import date
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User, UserRole
@@ -32,6 +32,7 @@ def calculate_progress(
 
     if total_tasks == 0:
         project.progress = 0
+        project.status = "Not Started"
         return 0
 
     completed_tasks = (
@@ -51,7 +52,9 @@ def calculate_progress(
 
     if progress == 100:
         project.status = "Completed"
-    elif progress > 0 and project.status == "Not Started":
+    elif date.today() > project.end_date:
+        project.status = "Delayed"
+    else:
         project.status = "In Progress"
 
     return progress
@@ -67,7 +70,7 @@ def create_project(
         description=project.description,
         start_date=project.start_date,
         end_date=project.end_date,
-        status=project.status,
+        status="Not Started",
         progress=0,
         created_by=user_id,
     )
@@ -83,8 +86,16 @@ def get_all_projects(
     db: Session,
     current_user: User,
 ):
-    if current_user.role.value in ["MANAGER", "ADMIN"]:
+    if current_user.role == UserRole.ADMIN:
         projects = db.query(Project).all()
+
+    elif current_user.role == UserRole.MANAGER:
+        projects = (
+            db.query(Project)
+            .filter(Project.created_by == current_user.id)
+            .all()
+        )
+
     else:
         projects = (
             db.query(Project)
@@ -99,21 +110,6 @@ def get_all_projects(
             .all()
         )
 
-    updated = False
-
-    for project in projects:
-        calculate_progress(
-            db,
-            project.id,
-        )
-        updated = True
-
-    if updated:
-        db.commit()
-
-    for project in projects:
-        db.refresh(project)
-
     return projects
 
 
@@ -127,7 +123,15 @@ def get_project_by_id(
         .filter(Project.id == project_id)
     )
 
-    if current_user.role.value not in ["MANAGER", "ADMIN"]:
+    if current_user.role == UserRole.ADMIN:
+        pass
+
+    elif current_user.role == UserRole.MANAGER:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    else:
         query = (
             query.join(
                 Task,
@@ -138,20 +142,7 @@ def get_project_by_id(
             )
         )
 
-    project = query.first()
-
-    if not project:
-        return None
-
-    calculate_progress(
-        db,
-        project.id,
-    )
-
-    db.commit()
-    db.refresh(project)
-
-    return project
+    return query.first()
 
 
 def update_project(
@@ -178,7 +169,11 @@ def update_project(
             detail="Not authorized to modify this project",
         )
 
-    for field, value in project.model_dump(exclude_unset=True).items():
+    update_data = project.model_dump(exclude_unset=True)
+
+    update_data.pop("status", None)
+
+    for field, value in update_data.items():
         setattr(db_project, field, value)
 
     calculate_progress(

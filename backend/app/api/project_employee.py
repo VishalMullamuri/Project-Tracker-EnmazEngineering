@@ -66,14 +66,8 @@ def assign(
             Employee.id == data.employee_id,
             Employee.is_active.is_(True),
         )
+        .first()
     )
-
-    if current_user.role != UserRole.ADMIN:
-        employee = employee.filter(
-            Employee.created_by == current_user.id
-        )
-
-    employee = employee.first()
 
     if not employee:
         raise HTTPException(

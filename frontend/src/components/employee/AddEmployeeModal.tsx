@@ -110,6 +110,10 @@ const AddEmployeeModal = ({
 
           <button
             onClick={async () => {
+              if (password.length < 12) {
+  alert("Password must be at least 12 characters.");
+  return;
+}
               await onAddEmployee({
                 name,
                 email,

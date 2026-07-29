@@ -17,10 +17,10 @@ const ChangePassword = () => {
   ) => {
     e.preventDefault();
 
-    if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
+    if (newPassword.length < 12) {
+  alert("Password must be at least 12 characters.");
+  return;
+}
 
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match.");
@@ -32,7 +32,7 @@ const ChangePassword = () => {
 
       const token = localStorage.getItem("token");
 
-      await api.put(
+      const response = await api.put(
         "/auth/change-password",
         {
           current_password: currentPassword,
@@ -45,27 +45,35 @@ const ChangePassword = () => {
         }
       );
 
-      const user = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
-
-      user.first_login = false;
-
       localStorage.setItem(
-        "user",
-        JSON.stringify(user)
-      );
+  "token",
+  response.data.access_token
+);
 
-      alert("Password changed successfully.");
-      sessionStorage.setItem("showConsolidated", "false");
+const user = JSON.parse(
+  localStorage.getItem("user") || "{}"
+);
 
-      navigate("/dashboard");
+user.first_login = false;
+
+localStorage.setItem(
+  "user",
+  JSON.stringify(user)
+);
+
+alert("Password changed successfully.");
+sessionStorage.setItem("showConsolidated", "false");
+
+navigate("/dashboard");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        alert(
-          error.response?.data?.detail ??
-            "Unable to change password."
-        );
+        const detail = error.response?.data?.detail;
+
+if (Array.isArray(detail)) {
+  alert(detail.map((e: any) => e.msg).join("\n"));
+} else {
+  alert(detail ?? "Unable to change password.");
+}
       }
     } finally {
       setLoading(false);
