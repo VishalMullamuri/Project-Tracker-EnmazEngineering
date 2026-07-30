@@ -3,7 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../../api/axios";
-
+import { apiErrorMessage } from "../../utils/apiErrorMessage";
 const Login = () => {
     const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -89,9 +89,10 @@ if (
   } catch (error) {
     if (axios.isAxiosError(error)) {
       alert(
-        error.response?.data?.detail ??
-          "Invalid email or password"
-      );
+  apiErrorMessage(
+    error.response?.data?.detail
+  )
+);
     } else {
       alert("Something went wrong.");
     }

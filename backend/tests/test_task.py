@@ -1,5 +1,5 @@
 from datetime import date
-
+import pytest
 
 def create_task(client, manager_headers, employee_user):
 
@@ -290,4 +290,38 @@ def test_team_member_cannot_update_others_task(
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "assigned_to",
+        "title",
+        "description",
+        "status",
+        "priority",
+        "start_date",
+        "due_date",
+    ],
+)
+def test_task_update_rejects_explicit_nulls(
+    client,
+    manager_headers,
+    employee_user,
+    field,
+):
+    task = create_task(
+        client,
+        manager_headers,
+        employee_user,
+    )
+
+    response = client.put(
+        f"/tasks/{task['id']}",
+        headers=manager_headers,
+        json={
+            field: None,
+        },
+    )
+
+    assert response.status_code == 422

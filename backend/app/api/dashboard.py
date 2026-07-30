@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, func
 
 from app.database.database import get_db
 
@@ -43,7 +44,10 @@ def dashboard_stats(
 
         delayed_projects = (
             db.query(Project)
-            .filter(Project.status == "Delayed")
+            .filter(
+                Project.status != "Completed",
+                Project.end_date < func.current_date(),
+            )
             .count()
         )
 
@@ -74,7 +78,10 @@ def dashboard_stats(
 
         delayed_projects = (
             manager_projects
-            .filter(Project.status == "Delayed")
+            .filter(
+                Project.status != "Completed",
+                Project.end_date < func.current_date(),
+            )
             .count()
         )
 
@@ -123,7 +130,8 @@ def dashboard_stats(
             db.query(Project)
             .filter(
                 Project.id.in_(assigned_project_ids),
-                Project.status == "Delayed",
+                Project.status != "Completed",
+                Project.end_date < func.current_date(),
             )
             .count()
         )

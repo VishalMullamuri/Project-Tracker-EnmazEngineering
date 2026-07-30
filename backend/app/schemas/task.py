@@ -28,21 +28,21 @@ class TaskUpdate(BaseModel):
     start_date: date | None = None
     due_date: date | None = None
 
-@model_validator(mode="after")
-def validate_nulls(self):
-    for field in (
-        "assigned_to",
-        "title",
-        "description",
-        "status",
-        "priority",
-        "start_date",
-        "due_date",
-    ):
-        if field in self.model_fields_set and getattr(self, field) is None:
-            raise ValueError(f"{field} cannot be null")
+    @model_validator(mode="after")
+    def validate_nulls(self):
+        for field in (
+            "assigned_to",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "start_date",
+            "due_date",
+        ):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
 
-    return self
+        return self
 
 
 class TaskResponse(BaseModel):

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import axios from "axios";
-
+import { apiErrorMessage } from "../utils/apiErrorMessage";
 const ChangePassword = () => {
   const navigate = useNavigate();
 
@@ -69,11 +69,7 @@ navigate("/dashboard");
       if (axios.isAxiosError(error)) {
         const detail = error.response?.data?.detail;
 
-if (Array.isArray(detail)) {
-  alert(detail.map((e: any) => e.msg).join("\n"));
-} else {
-  alert(detail ?? "Unable to change password.");
-}
+        alert(apiErrorMessage(detail));
       }
     } finally {
       setLoading(false);

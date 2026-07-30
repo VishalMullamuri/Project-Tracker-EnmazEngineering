@@ -85,15 +85,6 @@ def get(
             detail="Employee not found",
         )
 
-    if (
-        current_user.role != UserRole.ADMIN
-        and employee.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized",
-        )
-
     return employee
 
 

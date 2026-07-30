@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 import pytest
 from sqlalchemy.engine.url import make_url
-from app.core.rate_limit import limiter
 
 if "GITHUB_ACTIONS" in os.environ:
     os.environ["TEST_DATABASE_URL"] = (
@@ -22,10 +21,10 @@ if not url or not make_url(url).database.endswith("_test"):
 
 os.environ["DATABASE_URL"] = url
 
+from app.core.rate_limit import limiter
 from app.models.employee import Employee
 
 from fastapi.testclient import TestClient
-import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -43,7 +42,6 @@ TestingSessionLocal = sessionmaker(
     autoflush=False,
     bind=engine,
 )
-
 
 from alembic import command
 from alembic.config import Config

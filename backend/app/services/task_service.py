@@ -192,39 +192,27 @@ def update_task(
     task: TaskUpdate,
     current_user: User,
 ):
-    db_task = (
-        db.query(Task)
-        .filter(Task.id == task_id)
-        .first()
-    )
-
-    if not db_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found",
-        )
-
     role = (
         current_user.role.value
         if isinstance(current_user.role, UserRole)
         else current_user.role
     )
 
-    if role == "TEAM_MEMBER":
+    query = db.query(Task).filter(Task.id == task_id)
 
-        if db_task.assigned_to != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to modify this task",
-            )
+    if role == "TEAM_MEMBER":
+        query = query.filter(Task.assigned_to == current_user.id)
 
     elif role == "MANAGER":
+        query = query.filter(Task.created_by == current_user.id)
 
-        if db_task.created_by != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to modify this task",
-            )
+    db_task = query.first()
+
+    if not db_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
 
     update_data = task.model_dump(exclude_unset=True)
 
@@ -281,23 +269,17 @@ def delete_task(
     task_id: int,
     current_user: User,
 ):
-    db_task = (
-        db.query(Task)
-        .filter(Task.id == task_id)
-        .first()
-    )
+    query = db.query(Task).filter(Task.id == task_id)
+
+    if current_user.role == UserRole.MANAGER:
+        query = query.filter(
+            Task.created_by == current_user.id
+        )
+
+    db_task = query.first()
 
     if not db_task:
         return False
-
-    if (
-        current_user.role == UserRole.MANAGER
-        and db_task.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this task",
-        )
 
     project_id = db_task.project_id
 

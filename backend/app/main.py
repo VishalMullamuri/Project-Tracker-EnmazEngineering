@@ -1,12 +1,16 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.responses import Response
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
+
+from app.core.rate_limit import limiter
 
 from app.api.project import router as project_router
 from app.api.auth import router as auth_router
@@ -15,14 +19,6 @@ from app.api.dashboard import router as dashboard_router
 from app.api import user
 from app.routes.employee import router as employee_router
 from app.api.project_employee import router as project_employee_router
-
-# -----------------------------------
-# Rate Limiter
-# -----------------------------------
-
-limiter = Limiter(
-    key_func=get_remote_address
-)
 
 # -----------------------------------
 # FastAPI App
@@ -41,7 +37,6 @@ app = FastAPI(
 # Attach Rate Limiter
 # -----------------------------------
 
-
 app.state.limiter = limiter
 app.add_exception_handler(
     RateLimitExceeded,
@@ -53,10 +48,10 @@ app.add_middleware(SlowAPIMiddleware)
 # CORS Configuration
 # -----------------------------------
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173",
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +60,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# -----------------------------------
+# Security Middleware
+# -----------------------------------
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=os.getenv(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,testserver",
+).split(","),
+)
+
+if os.getenv("ENV") == "production":
+    app.add_middleware(
+        HTTPSRedirectMiddleware
+    )
+
+
+@app.middleware("http")
+async def security_headers(
+    request: Request,
+    call_next,
+):
+    response: Response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    return response
+
 
 # -----------------------------------
 # Register API Routers

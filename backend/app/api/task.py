@@ -155,12 +155,6 @@ def edit_task(
         current_user,
     )
 
-    if not updated:
-        raise HTTPException(
-            status_code=403,
-            detail="Not allowed to update this task",
-        )
-
     return updated
 
 
