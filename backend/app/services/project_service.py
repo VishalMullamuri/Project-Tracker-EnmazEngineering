@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import date
+
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User, UserRole
@@ -52,8 +53,6 @@ def calculate_progress(
 
     if progress == 100:
         project.status = "Completed"
-    elif date.today() > project.end_date:
-        project.status = "Delayed"
     else:
         project.status = "In Progress"
 
@@ -110,9 +109,17 @@ def get_all_projects(
             .all()
         )
 
+    for project in projects:
+        if project.progress == 100:
+            project.status = "Completed"
+        elif date.today() > project.end_date:
+            project.status = "Delayed"
+        elif project.progress == 0:
+            project.status = "Not Started"
+        else:
+            project.status = "In Progress"
+
     return projects
-
-
 def get_project_by_id(
     db: Session,
     project_id: int,
@@ -142,7 +149,19 @@ def get_project_by_id(
             )
         )
 
-    return query.first()
+    project = query.first()
+
+    if project:
+        if project.progress == 100:
+            project.status = "Completed"
+        elif date.today() > project.end_date:
+            project.status = "Delayed"
+        elif project.progress == 0:
+            project.status = "Not Started"
+        else:
+            project.status = "In Progress"
+
+    return project
 
 
 def update_project(
@@ -151,23 +170,20 @@ def update_project(
     project: ProjectUpdate,
     current_user: User,
 ):
-    db_project = (
+    query = (
         db.query(Project)
         .filter(Project.id == project_id)
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    db_project = query.first()
 
     if not db_project:
         return None
-
-    if (
-        current_user.role != UserRole.ADMIN
-        and db_project.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this project",
-        )
 
     update_data = project.model_dump(exclude_unset=True)
 
@@ -184,6 +200,15 @@ def update_project(
     db.commit()
     db.refresh(db_project)
 
+    if db_project.progress == 100:
+        db_project.status = "Completed"
+    elif date.today() > db_project.end_date:
+        db_project.status = "Delayed"
+    elif db_project.progress == 0:
+        db_project.status = "Not Started"
+    else:
+        db_project.status = "In Progress"
+
     return db_project
 
 
@@ -192,23 +217,20 @@ def delete_project(
     project_id: int,
     current_user: User,
 ):
-    db_project = (
+    query = (
         db.query(Project)
         .filter(Project.id == project_id)
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    db_project = query.first()
 
     if not db_project:
         return False
-
-    if (
-        current_user.role != UserRole.ADMIN
-        and db_project.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this project",
-        )
 
     db.delete(db_project)
     db.commit()

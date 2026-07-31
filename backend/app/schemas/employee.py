@@ -15,10 +15,9 @@ class EmployeeCreate(EmployeeBase):
 
 
 class EmployeeUpdate(BaseModel):
-    name: str
-    email: EmailStr
-    phone: str
-
+    name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
 
 class EmployeeResponse(BaseModel):
     id: int

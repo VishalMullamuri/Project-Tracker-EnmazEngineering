@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
-from fastapi import Request
 from app.database.database import get_db
 from app.models.user import User
 from app.core.rate_limit import limiter
@@ -47,7 +46,10 @@ DUMMY_PASSWORD_HASH = pwd_context.hash(
     "/register",
     response_model=UserResponse,
 )
+@limiter.limit("5/minute")
 def register_user(
+    request: Request,
+    response: Response,
     user: UserCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -89,6 +91,7 @@ def register_user(
 @limiter.limit("5/minute")
 def login_user(
     request: Request,
+    response: Response,
     user: UserLogin,
     db: Session = Depends(get_db),
 ):
@@ -121,8 +124,8 @@ def login_user(
 
     if not db_user.is_active:
         raise HTTPException(
-            status_code=403,
-            detail="Account is deactivated",
+            status_code=401,
+            detail="Invalid email or password",
         )
 
     access_token = create_access_token(
@@ -198,7 +201,10 @@ def team_member_only(
 # Change Password
 # -----------------------------------
 @router.put("/change-password")
+@limiter.limit("5/minute")  
 def change_password(
+    request: Request,
+    response: Response,
     data: ChangePassword,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

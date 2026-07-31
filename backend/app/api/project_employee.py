@@ -39,25 +39,22 @@ def assign(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    project = (
+    query = (
         db.query(Project)
         .filter(Project.id == data.project_id)
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    project = query.first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
-        )
-
-    if (
-        current_user.role != UserRole.ADMIN
-        and project.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this project",
         )
 
     employee = (
@@ -92,26 +89,23 @@ def remove(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    project = (
+    query = (
         db.query(Project)
         .filter(Project.id == data.project_id)
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    project = query.first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
         )
-
-    if (
-        current_user.role != UserRole.ADMIN
-        and project.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this project",
-    )
 
     remove_employee(
         db,

@@ -100,7 +100,7 @@ def update(
     employee_id: int,
     employee: EmployeeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(require_admin),
 ):
     updated = update_employee(
         db,

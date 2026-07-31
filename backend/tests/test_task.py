@@ -18,13 +18,23 @@ def create_task(client, manager_headers, employee_user):
     
 
     project_id = project.json()["id"]
+    assign = client.post(
+        "/project-employees",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "employee_id": employee_user.id,
+        },
+    )
+
+    assert assign.status_code == 200
 
     task = client.post(
         "/tasks",
         headers=manager_headers,
         json={
             "project_id": project_id,
-            "assigned_to": employee_user.id,
+            "assigned_to": employee_user.user_id,
             "title": "Task 1",
             "description": "Testing Task",
             "priority": "High",
@@ -96,7 +106,7 @@ def test_update_task(client, manager_headers, employee_user):
         json={
             "title": "Updated Task",
             "description": "Updated",
-            "assigned_to": employee_user.id,
+            "assigned_to": task["assigned_to"],
             "status": "Completed",
             "priority": "Medium",
             "remarks": "Done",
@@ -136,7 +146,7 @@ def test_team_member_cannot_create_task(
         headers=employee_headers,
         json={
             "project_id": 1,
-            "assigned_to": employee_user.id,
+            "assigned_to": employee_user.user_id,
             "title": "Unauthorized",
             "description": "Unauthorized",
             "priority": "High",
@@ -276,10 +286,12 @@ def test_team_member_cannot_update_others_task(
     db.commit()
     db.refresh(other_user)
 
+    db.refresh(other_employee)
+
     task = create_task(
         client,
         manager_headers,
-        other_user,
+        other_employee,
     )
 
     response = client.put(

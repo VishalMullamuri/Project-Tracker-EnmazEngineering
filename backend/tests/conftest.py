@@ -155,9 +155,12 @@ def employee_user(db, admin_user):
 
     db.add(employee)
     db.commit()
+    db.refresh(employee)
     db.refresh(user)
 
-    return user
+    employee.user = user
+
+    return employee
 
 
 @pytest.fixture()

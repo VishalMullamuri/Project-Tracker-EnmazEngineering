@@ -6,12 +6,31 @@ from app.models.user import User, UserRole
 from app.models.task import Task
 from app.models.project import Project
 from app.services.project_service import calculate_progress
-
+from app.models.project_employee import ProjectEmployee
 from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
 )
 
+def _resolve_project_member(db, project_id: int, assigned_to: int) -> Employee:
+    employee = (
+        db.query(Employee)
+        .join(ProjectEmployee, ProjectEmployee.employee_id == Employee.id)
+        .filter(
+            Employee.user_id == assigned_to,
+            Employee.is_active.is_(True),
+            ProjectEmployee.project_id == project_id,
+        )
+        .first()
+    )
+
+    if not employee:
+        raise HTTPException(
+            status_code=400,
+            detail="Assigned employee is not a member of this project",
+        )
+
+    return employee
 
 def create_task(
     db: Session,
@@ -45,25 +64,11 @@ def create_task(
             detail="Not authorized to create tasks for this project",
         )
 
-    employee = (
-        db.query(Employee)
-        .filter(
-            Employee.user_id == task.assigned_to,
-            Employee.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not employee:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Assigned employee not found",
-        )
-    if not employee:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Assigned employee not found",
-        )
+    employee = _resolve_project_member(
+    db,
+    task.project_id,
+    task.assigned_to,
+)
 
     db_task = Task(
         project_id=task.project_id,
@@ -198,13 +203,17 @@ def update_task(
         else current_user.role
     )
 
-    query = db.query(Task).filter(Task.id == task_id)
+    query = (
+        db.query(Task)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Task.id == task_id)
+    )
 
     if role == "TEAM_MEMBER":
         query = query.filter(Task.assigned_to == current_user.id)
 
     elif role == "MANAGER":
-        query = query.filter(Task.created_by == current_user.id)
+        query = query.filter(Project.created_by == current_user.id)
 
     db_task = query.first()
 
@@ -224,20 +233,11 @@ def update_task(
         }
 
     if "assigned_to" in update_data:
-        employee = (
-            db.query(Employee)
-            .filter(
-                Employee.user_id == update_data["assigned_to"],
-                Employee.is_active.is_(True),
-            )
-            .first()
+        employee = _resolve_project_member(
+            db,
+            db_task.project_id,
+            update_data["assigned_to"],
         )
-
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assigned employee not found",
-            )
 
     for field, value in update_data.items():
         setattr(db_task, field, value)
@@ -269,11 +269,15 @@ def delete_task(
     task_id: int,
     current_user: User,
 ):
-    query = db.query(Task).filter(Task.id == task_id)
+    query = (
+        db.query(Task)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Task.id == task_id)
+    )
 
     if current_user.role == UserRole.MANAGER:
         query = query.filter(
-            Task.created_by == current_user.id
+            Project.created_by == current_user.id
         )
 
     db_task = query.first()

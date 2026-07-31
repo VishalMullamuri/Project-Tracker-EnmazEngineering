@@ -107,14 +107,6 @@ def update_employee(
     if not db_employee:
         return None
 
-    if (
-        current_user.role != UserRole.ADMIN
-        and db_employee.created_by != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this employee",
-        )
 
     update_data = employee.model_dump(exclude_unset=True)
 
