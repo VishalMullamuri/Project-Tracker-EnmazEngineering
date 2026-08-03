@@ -196,3 +196,58 @@ def test_manager_can_assign_admin_created_employee(
 )
 
     assert assign_response.status_code == 200
+
+def test_dashboard_counts_match_project_list(
+    client,
+    manager_headers,
+):
+    project_response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Dashboard Project",
+            "description": "Test",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
+    )
+
+    assert project_response.status_code == 200
+
+    projects_response = client.get(
+        "/projects",
+        headers=manager_headers,
+    )
+
+    dashboard_response = client.get(
+        "/dashboard/stats",
+        headers=manager_headers,
+    )
+
+    assert projects_response.status_code == 200
+    assert dashboard_response.status_code == 200
+
+    projects = projects_response.json()
+    dashboard = dashboard_response.json()
+
+    assert dashboard["total_projects"] == len(projects)
+
+    assert dashboard["completed_projects"] == sum(
+        1 for p in projects
+        if p["status"] == "Completed"
+    )
+
+    assert dashboard["active_projects"] == sum(
+        1 for p in projects
+        if p["status"] == "In Progress"
+    )
+
+    assert dashboard["delayed_projects"] == sum(
+        1 for p in projects
+        if p["status"] == "Delayed"
+    )
+
+    assert dashboard["not_started_projects"] == sum(
+        1 for p in projects
+        if p["status"] == "Not Started"
+    )

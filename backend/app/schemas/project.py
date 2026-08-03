@@ -1,7 +1,11 @@
 from datetime import date
-from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    computed_field,
+    model_validator,
+)
 
 
 class ProjectCreate(BaseModel):
@@ -9,9 +13,6 @@ class ProjectCreate(BaseModel):
     description: str
     start_date: date
     end_date: date
-
-
-from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class ProjectUpdate(BaseModel):
@@ -27,11 +28,13 @@ class ProjectUpdate(BaseModel):
         for field in (
             "project_name",
             "description",
-            "status",
             "start_date",
             "end_date",
         ):
-            if field in self.model_fields_set and getattr(self, field) is None:
+            if (
+                field in self.model_fields_set
+                and getattr(self, field) is None
+            ):
                 raise ValueError(f"{field} cannot be null")
 
         return self
@@ -41,11 +44,24 @@ class ProjectResponse(BaseModel):
     id: int
     project_name: str
     description: str
-    status: str
     progress: int
     start_date: date
     end_date: date
     created_by: int
+
+    @computed_field
+    @property
+    def status(self) -> str:
+        if self.progress == 100:
+            return "Completed"
+
+        if self.end_date < date.today():
+            return "Delayed"
+
+        if self.progress == 0:
+            return "Not Started"
+
+        return "In Progress"
 
     class Config:
         from_attributes = True

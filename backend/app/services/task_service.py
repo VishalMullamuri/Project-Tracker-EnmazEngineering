@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
+from app.models.user import User
 from app.models.employee import Employee
 from app.models.user import User, UserRole
 from app.models.task import Task
@@ -12,13 +12,22 @@ from app.schemas.task import (
     TaskUpdate,
 )
 
-def _resolve_project_member(db, project_id: int, assigned_to: int) -> Employee:
+def _resolve_project_member(
+    db,
+    project_id: int,
+    assigned_to: int,
+) -> Employee:
     employee = (
         db.query(Employee)
-        .join(ProjectEmployee, ProjectEmployee.employee_id == Employee.id)
+        .join(User, User.id == Employee.user_id)
+        .join(
+            ProjectEmployee,
+            ProjectEmployee.employee_id == Employee.id,
+        )
         .filter(
             Employee.user_id == assigned_to,
             Employee.is_active.is_(True),
+            User.is_active.is_(True),
             ProjectEmployee.project_id == project_id,
         )
         .first()
@@ -35,33 +44,24 @@ def _resolve_project_member(db, project_id: int, assigned_to: int) -> Employee:
 def create_task(
     db: Session,
     task: TaskCreate,
-    user_id: int,
+    current_user: User,
 ):
-    project = (
+    query = (
         db.query(Project)
         .filter(Project.id == task.project_id)
-        .first()
     )
+
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(
+            Project.created_by == current_user.id
+        )
+
+    project = query.first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
-        )
-
-    user = (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
-    )
-
-    if (
-        user.role != UserRole.ADMIN
-        and project.created_by != user_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create tasks for this project",
         )
 
     employee = _resolve_project_member(
@@ -79,7 +79,7 @@ def create_task(
         start_date=task.start_date,
         due_date=task.due_date,
         status="Pending",
-        created_by=user_id,
+        created_by=current_user.id,
     )
 
     db.add(db_task)
@@ -226,10 +226,25 @@ def update_task(
     update_data = task.model_dump(exclude_unset=True)
 
     if role == "TEAM_MEMBER":
+        allowed_fields = {"status", "remarks"}
+
+        forbidden_fields = sorted(
+            set(update_data.keys()) - allowed_fields
+        )
+
+        if forbidden_fields:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Team members cannot modify: "
+                    + ", ".join(forbidden_fields)
+                ),
+            )
+
         update_data = {
             key: value
             for key, value in update_data.items()
-            if key in {"status", "remarks"}
+            if key in allowed_fields
         }
 
     if "assigned_to" in update_data:

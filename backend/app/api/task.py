@@ -42,7 +42,7 @@ def create_new_task(
     return create_task(
         db,
         task,
-        current_user.id,
+        current_user,
     )
 
 

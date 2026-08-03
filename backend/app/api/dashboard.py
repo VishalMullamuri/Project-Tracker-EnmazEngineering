@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
+from sqlalchemy import func, and_
 
 from app.database.database import get_db
 
@@ -22,72 +22,16 @@ def dashboard_stats(
     current_user: User = Depends(get_current_user),
 ):
 
-    # ==========================
-    # ADMIN
-    # ==========================
-
     if current_user.role == UserRole.ADMIN:
 
-        total_projects = db.query(Project).count()
-
-        completed_projects = (
-            db.query(Project)
-            .filter(Project.status == "Completed")
-            .count()
-        )
-
-        active_projects = (
-            db.query(Project)
-            .filter(Project.status == "In Progress")
-            .count()
-        )
-
-        delayed_projects = (
-            db.query(Project)
-            .filter(
-                Project.status != "Completed",
-                Project.end_date < func.current_date(),
-            )
-            .count()
-        )
-
-    # ==========================
-    # MANAGER
-    # ==========================
+        projects = db.query(Project)
 
     elif current_user.role == UserRole.MANAGER:
 
-        manager_projects = (
+        projects = (
             db.query(Project)
             .filter(Project.created_by == current_user.id)
         )
-
-        total_projects = manager_projects.count()
-
-        completed_projects = (
-            manager_projects
-            .filter(Project.status == "Completed")
-            .count()
-        )
-
-        active_projects = (
-            manager_projects
-            .filter(Project.status == "In Progress")
-            .count()
-        )
-
-        delayed_projects = (
-            manager_projects
-            .filter(
-                Project.status != "Completed",
-                Project.end_date < func.current_date(),
-            )
-            .count()
-        )
-
-    # ==========================
-    # TEAM MEMBER
-    # ==========================
 
     else:
 
@@ -100,45 +44,51 @@ def dashboard_stats(
             .subquery()
         )
 
-        total_projects = (
+        projects = (
             db.query(Project)
-            .filter(
-                Project.id.in_(assigned_project_ids)
-            )
-            .count()
+            .filter(Project.id.in_(assigned_project_ids))
         )
 
-        completed_projects = (
-            db.query(Project)
-            .filter(
-                Project.id.in_(assigned_project_ids),
-                Project.status == "Completed",
-            )
-            .count()
-        )
+    total_projects = projects.count()
 
-        active_projects = (
-            db.query(Project)
-            .filter(
-                Project.id.in_(assigned_project_ids),
-                Project.status == "In Progress",
-            )
-            .count()
-        )
+    completed_projects = (
+        projects.filter(
+            Project.progress == 100
+        ).count()
+    )
 
-        delayed_projects = (
-            db.query(Project)
-            .filter(
-                Project.id.in_(assigned_project_ids),
-                Project.status != "Completed",
+    delayed_projects = (
+        projects.filter(
+            and_(
+                Project.progress < 100,
                 Project.end_date < func.current_date(),
             )
-            .count()
-        )
+        ).count()
+    )
+
+    not_started_projects = (
+        projects.filter(
+            and_(
+                Project.progress == 0,
+                Project.end_date >= func.current_date(),
+            )
+        ).count()
+    )
+
+    active_projects = (
+        projects.filter(
+            and_(
+                Project.progress > 0,
+                Project.progress < 100,
+                Project.end_date >= func.current_date(),
+            )
+        ).count()
+    )
 
     return {
         "total_projects": total_projects,
         "active_projects": active_projects,
         "completed_projects": completed_projects,
         "delayed_projects": delayed_projects,
+        "not_started_projects": not_started_projects,
     }

@@ -33,7 +33,6 @@ def calculate_progress(
 
     if total_tasks == 0:
         project.progress = 0
-        project.status = "Not Started"
         return 0
 
     completed_tasks = (
@@ -51,10 +50,8 @@ def calculate_progress(
 
     project.progress = progress
 
-    if progress == 100:
-        project.status = "Completed"
-    else:
-        project.status = "In Progress"
+    # Only persist progress.
+    project.progress = progress
 
     return progress
 

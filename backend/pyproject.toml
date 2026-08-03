@@ -1,0 +1,6 @@
+[tool.ruff.lint]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+]

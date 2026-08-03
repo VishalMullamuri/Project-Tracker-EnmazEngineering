@@ -1,7 +1,15 @@
 import axios from "axios";
 
+const apiUrl = import.meta.env.VITE_API_URL;
+
+if (!apiUrl) {
+  throw new Error(
+    "VITE_API_URL is not set. Please configure it in your .env file."
+  );
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: apiUrl,
   headers: {
     "Content-Type": "application/json",
   },
