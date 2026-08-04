@@ -3,22 +3,21 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-from sqlalchemy import text
-from app.database.database import SessionLocal
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import text
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.core.rate_limit import limiter
-
-from app.api.project import router as project_router
-from app.api.auth import router as auth_router
-from app.api.task import router as task_router
-from app.api.dashboard import router as dashboard_router
 from app.api import user
-from app.routes.employee import router as employee_router
+from app.api.auth import router as auth_router
+from app.api.dashboard import router as dashboard_router
+from app.api.project import router as project_router
 from app.api.project_employee import router as project_employee_router
+from app.api.task import router as task_router
+from app.core.rate_limit import limiter
+from app.database.database import SessionLocal
+from app.routes.employee import router as employee_router
 from app.routes.users import router as users_router
 
 ENV = os.getenv("ENV", "production")

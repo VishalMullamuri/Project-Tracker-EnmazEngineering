@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database.database import get_db
 from app.core.permissions import require_admin
-from app.models.user import User
-
 from app.crud.user import (
-    deactivate_user,
     activate_user,
+    deactivate_user,
 )
+from app.database.database import get_db
+from app.models.user import User
 
 router = APIRouter(
     prefix="/users",

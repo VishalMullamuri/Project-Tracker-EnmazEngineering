@@ -1,12 +1,11 @@
 from sqlalchemy import (
     Column,
-    Integer,
-    String,
-    ForeignKey,
     Date,
     DateTime,
+    ForeignKey,
+    Integer,
+    String,
 )
-
 from sqlalchemy.sql import func
 
 from app.database.database import Base

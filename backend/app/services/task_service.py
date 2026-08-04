@@ -1,16 +1,17 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.models.user import User
+
 from app.models.employee import Employee
-from app.models.user import User, UserRole
-from app.models.task import Task
 from app.models.project import Project
-from app.services.project_service import calculate_progress
 from app.models.project_employee import ProjectEmployee
+from app.models.task import Task
+from app.models.user import User, UserRole
 from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
 )
+from app.services.project_service import calculate_progress
+
 
 def _resolve_project_member(
     db,
@@ -64,7 +65,7 @@ def create_task(
             detail="Project not found",
         )
 
-    employee = _resolve_project_member(
+    _resolve_project_member(
     db,
     task.project_id,
     task.assigned_to,
@@ -248,7 +249,7 @@ def update_task(
         }
 
     if "assigned_to" in update_data:
-        employee = _resolve_project_member(
+        _resolve_project_member(
             db,
             db_task.project_id,
             update_data["assigned_to"],

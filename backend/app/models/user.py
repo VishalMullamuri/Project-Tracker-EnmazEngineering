@@ -4,11 +4,12 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SqlEnum,
     Integer,
     String,
 )
-
+from sqlalchemy import (
+    Enum as SqlEnum,
+)
 from sqlalchemy.sql import func
 
 from app.database.database import Base

@@ -1,5 +1,5 @@
-from .user import User
-from .user import UserRole
-from .employee import Employee
-from .project import Project
-from .task import Task
+from .employee import Employee as Employee
+from .project import Project as Project
+from .task import Task as Task
+from .user import User as User
+from .user import UserRole as UserRole

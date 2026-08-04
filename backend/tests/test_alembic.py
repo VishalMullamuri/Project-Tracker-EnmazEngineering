@@ -1,7 +1,10 @@
-from alembic.config import Config
-from alembic import command
-from sqlalchemy import create_engine, text
 import os
+
+from alembic.config import Config
+from sqlalchemy import create_engine, text
+
+from alembic import command
+
 
 def test_alembic_upgrade_head():
     engine = create_engine(os.environ["DATABASE_URL"])

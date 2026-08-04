@@ -1,10 +1,10 @@
-from sqlalchemy.orm import Session
 import os
 
+from sqlalchemy.orm import Session
+
+from app.core.security import hash_password
 from app.database.database import SessionLocal
 from app.models.user import User, UserRole
-from app.core.security import hash_password
-
 
 ADMIN_NAME = "Admin"
 ADMIN_EMAIL = os.environ["SEED_ADMIN_EMAIL"]

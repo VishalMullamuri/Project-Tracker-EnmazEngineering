@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
 
+from app.core.security import get_current_user
 from app.database.database import get_db
-
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User, UserRole
-
-from app.core.security import get_current_user
 
 router = APIRouter(
     prefix="/dashboard",

@@ -1,11 +1,10 @@
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 from datetime import date
+
+from sqlalchemy.orm import Session
 
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User, UserRole
-
 from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,

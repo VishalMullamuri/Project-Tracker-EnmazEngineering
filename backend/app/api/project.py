@@ -3,28 +3,23 @@ from fastapi import (
     Depends,
     HTTPException,
 )
-
 from sqlalchemy.orm import Session
 
+from app.core.permissions import require_manager
+from app.core.security import get_current_user
 from app.database.database import get_db
-
+from app.models.user import User
 from app.schemas.project import (
     ProjectCreate,
-    ProjectUpdate,
     ProjectResponse,
+    ProjectUpdate,
 )
-
-from app.models.user import User
-
-from app.core.security import get_current_user
-from app.core.permissions import require_manager
-
 from app.services.project_service import (
     create_project,
+    delete_project,
     get_all_projects,
     get_project_by_id,
     update_project,
-    delete_project,
 )
 
 router = APIRouter(

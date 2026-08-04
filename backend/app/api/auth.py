@@ -1,29 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy.orm import Session
-from app.database.database import get_db
-from app.models.user import User
-from app.core.rate_limit import limiter
-from app.schemas.user import (
-    UserCreate,
-    UserLogin,
-    UserResponse,
-    Token,
-    ChangePassword,
-)
-
-from app.core.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    get_current_user,
-)
-
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 from app.core.permissions import (
     require_admin,
     require_manager,
     require_team_member,
+)
+from app.core.rate_limit import limiter
+from app.core.security import (
+    create_access_token,
+    get_current_user,
+    hash_password,
+    verify_password,
+)
+from app.database.database import get_db
+from app.models.user import User
+from app.schemas.user import (
+    ChangePassword,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
 )
 
 router = APIRouter(

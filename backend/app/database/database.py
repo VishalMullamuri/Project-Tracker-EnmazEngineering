@@ -3,7 +3,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config.config import DATABASE_URL
 
-
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

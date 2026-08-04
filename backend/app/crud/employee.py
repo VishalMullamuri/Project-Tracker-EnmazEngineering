@@ -1,10 +1,11 @@
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.models.project_employee import ProjectEmployee
-from app.models.task import Task
+
 from app.core.security import hash_password
 from app.models.employee import Employee
+from app.models.project_employee import ProjectEmployee
+from app.models.task import Task
 from app.models.user import User, UserRole
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 
@@ -53,17 +54,16 @@ def create_employee(
         db.add(db_employee)
 
         db.commit()
-
         db.refresh(db_employee)
 
         return db_employee
 
-    except IntegrityError:
+    except IntegrityError as err:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already exists.",
-        )
+        ) from err
 
     except Exception:
         db.rollback()
@@ -138,7 +138,6 @@ def update_employee(
     if not db_employee:
         return None
 
-
     update_data = employee.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -163,12 +162,12 @@ def update_employee(
         db.refresh(db_employee)
         return db_employee
 
-    except IntegrityError:
+    except IntegrityError as err:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already exists.",
-        )
+        ) from err
 
     except Exception:
         db.rollback()

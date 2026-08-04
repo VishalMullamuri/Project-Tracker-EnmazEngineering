@@ -1,5 +1,7 @@
 from datetime import date
+
 import pytest
+
 
 def create_task(client, manager_headers, employee_user):
 
@@ -255,8 +257,8 @@ def test_team_member_cannot_update_others_task(
     employee_user,
     db,
 ):
-    from app.models.user import User, UserRole
     from app.core.security import hash_password
+    from app.models.user import User, UserRole
 
     other_user = User(
         name="Other Employee",

@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+
 import pytest
 from sqlalchemy.engine.url import make_url
 
@@ -21,17 +21,16 @@ if not url or not make_url(url).database.endswith("_test"):
 
 os.environ["DATABASE_URL"] = url
 
-from app.core.rate_limit import limiter
-from app.models.employee import Employee
-
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
-from app.database.database import Base, get_db
-from app.models.user import User, UserRole
+from app.core.rate_limit import limiter
 from app.core.security import hash_password
+from app.database.database import get_db
+from app.main import app
+from app.models.employee import Employee
+from app.models.user import User, UserRole
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 
@@ -43,8 +42,9 @@ TestingSessionLocal = sessionmaker(
     bind=engine,
 )
 
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 
 
 @pytest.fixture(scope="session", autouse=True)

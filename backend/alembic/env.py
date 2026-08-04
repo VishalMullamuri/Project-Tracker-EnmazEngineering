@@ -1,13 +1,11 @@
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
-from alembic import context
-
-from app.config.config import DATABASE_URL
-from app.database.database import Base
 
 # Import all models so SQLAlchemy registers them
-import app.database.base
+from alembic import context
+from app.config.config import DATABASE_URL
+from app.database.database import Base
 
 config = context.config
 config.set_main_option(

@@ -1,25 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from app.core.permissions import require_admin
 from app.core.security import get_current_user
-from app.database.database import get_db
-
-from app.schemas.employee import (
-    EmployeeCreate,
-    EmployeeUpdate,
-    EmployeeResponse,
-)
-
 from app.crud.employee import (
     create_employee,
+    delete_employee,
     get_all_employees,
     get_employee,
     update_employee,
-    delete_employee,
 )
-
-from app.models.user import User, UserRole
-from app.models.employee import Employee
-from app.core.permissions import require_admin, require_manager
+from app.database.database import get_db
+from app.models.user import User
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeResponse,
+    EmployeeUpdate,
+)
 
 router = APIRouter(
     prefix="/employees",

@@ -1,3 +1,11 @@
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["DTZ011"]
+"tests/conftest.py" = ["E402"]
+"alembic/versions/*" = ["E501", "UP007", "UP035"]
+
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
     "fastapi.Depends",

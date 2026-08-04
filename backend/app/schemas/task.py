@@ -92,8 +92,8 @@ class TaskResponse(BaseModel):
     assigned_to: int
     title: str
     description: str
-    status: TaskStatus
-    priority: TaskPriority
+    status: str
+    priority: str
     remarks: str | None = None
     start_date: date
     due_date: date

@@ -1,20 +1,19 @@
 from datetime import datetime, timedelta
-from typing import Optional
 
+import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
 )
-import jwt
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.config.config import (
-    SECRET_KEY,
-    ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    SECRET_KEY,
 )
 from app.database.database import get_db
 from app.models.user import User
@@ -53,7 +52,7 @@ def verify_password(
 
 def create_access_token(
     data: dict,
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta | None = None,
 ):
     to_encode = data.copy()
 
@@ -103,8 +102,8 @@ def get_current_user(
 
         user_id = int(user_id)
 
-    except (InvalidTokenError, ValueError, TypeError):
-        raise credentials_exception
+    except (InvalidTokenError, ValueError, TypeError) as err:
+        raise credentials_exception from err
 
     user = (
         db.query(User)
