@@ -1,7 +1,8 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
 from app.models.employee import Employee
-from app.models.user import User
+from app.models.user import User, UserRole
 
 
 def deactivate_user(
@@ -21,11 +22,8 @@ def deactivate_user(
         .first()
     )
 
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found",
-        )
+    if not user.is_active:
+        return user
 
     if user.role == UserRole.ADMIN:
         remaining = (
@@ -44,8 +42,6 @@ def deactivate_user(
                 detail="Cannot deactivate the last active admin",
             )
 
-    if not user.is_active:
-        return user
 
     user.is_active = False
     user.token_version += 1
@@ -83,6 +79,14 @@ def activate_user(
         return user
 
     user.is_active = True
+    employee = (
+        db.query(Employee)
+        .filter(Employee.user_id == user.id)
+        .first()
+    )
+
+    if employee:
+        employee.is_active = True
     user.token_version += 1
     employee = (
         db.query(Employee)

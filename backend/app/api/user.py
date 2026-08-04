@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -14,15 +14,20 @@ router = APIRouter(
 
 @router.get("")
 def get_users(
+    include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
     if current_user.role == UserRole.ADMIN:
-        users = (
-            db.query(User)
-            .filter(User.is_active.is_(True))
-            .all()
-        )
+        query = db.query(User)
+
+        if not include_inactive:
+            query = query.filter(
+                User.is_active.is_(True)
+            )
+
+        users = query.all()
+
     else:
         users = (
             db.query(User)
@@ -40,6 +45,7 @@ def get_users(
             "name": user.name,
             "email": user.email,
             "role": user.role,
+            "is_active": user.is_active,
         }
         for user in users
     ]

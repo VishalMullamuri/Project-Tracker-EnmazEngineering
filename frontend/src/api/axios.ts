@@ -43,6 +43,14 @@ api.interceptors.response.use(
       window.location.href = "/";
     }
 
+    if (status === 403) {
+      return Promise.reject(error);
+    }
+
+    if (status === 429) {
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );

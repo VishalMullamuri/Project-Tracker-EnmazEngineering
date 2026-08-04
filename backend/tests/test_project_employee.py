@@ -26,12 +26,11 @@ def test_manager_can_assign_admin_created_employee(
         "/projects",
         headers=manager_headers,
         json={
-            "project_name": "Manager Project",
-            "description": "Test Project",
-            "status": "Not Started",
-            "start_date": str(date.today()),
-            "end_date": str(date.today()),
-        },
+    "project_name": "Manager Project",
+    "description": "Test Project",
+    "start_date": str(date.today()),
+    "end_date": str(date.today()),
+}
     )
 
     assert project_response.status_code == 200

@@ -150,58 +150,13 @@ def test_team_member_cannot_create_project(
     assert response.status_code == 403
 
 
-def test_manager_can_assign_admin_created_employee(
-    client,
-    admin_headers,
-    manager_headers,
-):
-    employee_response = client.post(
-        "/employees",
-        headers=admin_headers,
-        json={
-            "name": "Test Employee",
-            "email": "testemployee@test.com",
-            "password": "Employee@123",
-            "phone": "9876543210",
-            "role": "TEAM_MEMBER",
-        },
-    )
-
-    assert employee_response.status_code == 200
-
-    employee_id = employee_response.json()["id"]
-
-    project_response = client.post(
-        "/projects",
-        headers=manager_headers,
-        json={
-            "project_name": "Manager Project",
-            "description": "Test Project",
-            "start_date": str(date.today()),
-            "end_date": str(date.today()),
-        },
-    )
-
-    assert project_response.status_code == 200
-
-    project_id = project_response.json()["id"]
-
-    assign_response = client.post(
-    "/project-employees",
-    headers=manager_headers,
-    json={
-        "project_id": project_id,
-        "employee_id": employee_id,
-    },
-)
-
-    assert assign_response.status_code == 200
 
 def test_dashboard_counts_match_project_list(
     client,
     manager_headers,
+    employee_user,
 ):
-    project_response = client.post(
+    project = client.post(
         "/projects",
         headers=manager_headers,
         json={
@@ -212,42 +167,69 @@ def test_dashboard_counts_match_project_list(
         },
     )
 
-    assert project_response.status_code == 200
+    project_id = project.json()["id"]
 
-    projects_response = client.get(
+    client.post(
+        "/project-employees",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "employee_id": employee_user.id,
+        },
+    )
+
+    client.post(
+        "/tasks",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "assigned_to": employee_user.user_id,
+            "title": "Task",
+            "description": "Task",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    client.put(
+        "/tasks/1",
+        headers=manager_headers,
+        json={
+            "status": "Completed",
+        },
+    )
+
+    projects = client.get(
         "/projects",
         headers=manager_headers,
     )
 
-    dashboard_response = client.get(
+    dashboard = client.get(
         "/dashboard/stats",
         headers=manager_headers,
     )
 
-    assert projects_response.status_code == 200
-    assert dashboard_response.status_code == 200
+    assert projects.status_code == 200
+    assert dashboard.status_code == 200
 
-    projects = projects_response.json()
-    dashboard = dashboard_response.json()
+    project_list = projects.json()
+    stats = dashboard.json()
 
-    assert dashboard["total_projects"] == len(projects)
-
-    assert dashboard["completed_projects"] == sum(
-        1 for p in projects
-        if p["status"] == "Completed"
+    assert stats["total_projects"] == len(project_list)
+    assert stats["completed_projects"] == sum(
+        p["status"] == "Completed"
+        for p in project_list
     )
-
-    assert dashboard["active_projects"] == sum(
-        1 for p in projects
-        if p["status"] == "In Progress"
+    assert stats["active_projects"] == sum(
+        p["status"] == "In Progress"
+        for p in project_list
     )
-
-    assert dashboard["delayed_projects"] == sum(
-        1 for p in projects
-        if p["status"] == "Delayed"
+    assert stats["delayed_projects"] == sum(
+        p["status"] == "Delayed"
+        for p in project_list
     )
-
-    assert dashboard["not_started_projects"] == sum(
-        1 for p in projects
-        if p["status"] == "Not Started"
+    assert stats["not_started_projects"] == sum(
+        p["status"] == "Not Started"
+        for p in project_list
     )

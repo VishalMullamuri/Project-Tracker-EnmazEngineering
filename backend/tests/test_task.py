@@ -7,12 +7,11 @@ def create_task(client, manager_headers, employee_user):
         "/projects",
         headers=manager_headers,
         json={
-            "project_name": "Task Project",
-            "description": "Testing",
-            "status": "Not Started",
-            "start_date": str(date.today()),
-            "end_date": str(date.today()),
-        },
+    "project_name": "Task Project",
+    "description": "Testing",
+    "start_date": str(date.today()),
+    "end_date": str(date.today()),
+},
     )
 
     
