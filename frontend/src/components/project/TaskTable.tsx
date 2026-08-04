@@ -99,24 +99,34 @@ const isManager =
     const token =
       localStorage.getItem("token");
 
-    await api.put(
-      `/tasks/${task.id}`,
-      {
-        assigned_to: task.assigned_to,
-  title: task.title,
-  description: task.description,
-  status: newStatus,
-  priority: task.priority,
-  remarks: task.remarks,
-  start_date: task.start_date,
-  due_date: task.due_date,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    const role = JSON.parse(localStorage.getItem("user") || "{}").role;
+
+const payload =
+  role === "TEAM_MEMBER"
+    ? {
+        status: newStatus,
+        remarks: task.remarks,
       }
-    );
+    : {
+        assigned_to: task.assigned_to,
+        title: task.title,
+        description: task.description,
+        status: newStatus,
+        priority: task.priority,
+        remarks: task.remarks,
+        start_date: task.start_date,
+        due_date: task.due_date,
+      };
+
+await api.put(
+  `/tasks/${task.id}`,
+  payload,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
     await refreshTasks();
 

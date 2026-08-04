@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from app.core.security import get_current_user
 from app.database.database import get_db
 
 from app.schemas.employee import (
@@ -57,9 +57,12 @@ def create(
 )
 def get_all(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(get_current_user),
 ):
-    return get_all_employees(db)
+    return get_all_employees(
+        db,
+        current_user,
+    )
 
 # ----------------------------------
 # Get Single Employee
@@ -72,7 +75,7 @@ def get_all(
 def get(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(get_current_user),
 ):
     employee = get_employee(
         db,

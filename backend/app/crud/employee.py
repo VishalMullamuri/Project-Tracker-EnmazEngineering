@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.models.project_employee import ProjectEmployee
+from app.models.task import Task
 from app.core.security import hash_password
 from app.models.employee import Employee
 from app.models.user import User, UserRole
@@ -71,10 +72,40 @@ def create_employee(
 
 def get_all_employees(
     db: Session,
+    current_user: User,
 ):
+    if current_user.role == UserRole.ADMIN:
+        return (
+            db.query(Employee)
+            .filter(Employee.is_active.is_(True))
+            .all()
+        )
+
+    if current_user.role == UserRole.MANAGER:
+        return (
+            db.query(Employee)
+            .filter(
+                Employee.created_by == current_user.id,
+                Employee.is_active.is_(True),
+            )
+            .all()
+        )
+
     return (
         db.query(Employee)
-        .filter(Employee.is_active.is_(True))
+        .join(
+            ProjectEmployee,
+            Employee.id == ProjectEmployee.employee_id,
+        )
+        .join(
+            Task,
+            Task.project_id == ProjectEmployee.project_id,
+        )
+        .filter(
+            Task.assigned_to == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .distinct()
         .all()
     )
 
