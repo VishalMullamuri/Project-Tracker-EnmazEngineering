@@ -86,10 +86,19 @@ def get_all_employees(
     if current_user.role == UserRole.MANAGER:
         return (
             db.query(Employee)
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.employee_id == Employee.id,
+            )
+            .join(
+                Project,
+                Project.id == ProjectEmployee.project_id,
+            )
             .filter(
-                Employee.created_by == current_user.id,
+                Project.created_by == current_user.id,
                 Employee.is_active.is_(True),
             )
+            .distinct()
             .all()
         )
 
