@@ -7,7 +7,7 @@ from app.crud.employee import (
     create_employee,
     delete_employee,
     get_all_employees,
-    get_employee,
+    get_employee_for_user,
     update_employee,
 )
 from app.database.database import get_db
@@ -74,9 +74,10 @@ def get(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    employee = get_employee(
+    employee = get_employee_for_user(
         db,
         employee_id,
+        current_user,
     )
 
     if not employee:

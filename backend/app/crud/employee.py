@@ -3,7 +3,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.crud.user import deactivate_user
 from app.models.employee import Employee
+from app.models.project import Project
 from app.models.project_employee import ProjectEmployee
 from app.models.task import Task
 from app.models.user import User, UserRole
@@ -123,6 +125,55 @@ def get_employee(
         .first()
     )
 
+def get_employee_for_user(
+    db: Session,
+    employee_id: int,
+    current_user: User,
+):
+    query = (
+        db.query(Employee)
+        .filter(
+            Employee.id == employee_id,
+            Employee.is_active.is_(True),
+        )
+    )
+
+    if current_user.role == UserRole.ADMIN:
+        return query.first()
+
+    if current_user.role == UserRole.MANAGER:
+        return (
+            query
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.employee_id == Employee.id,
+            )
+            .join(
+                Project,
+                Project.id == ProjectEmployee.project_id,
+            )
+            .filter(
+                Project.created_by == current_user.id,
+            )
+            .first()
+        )
+
+    return (
+        query
+        .join(
+            ProjectEmployee,
+            ProjectEmployee.employee_id == Employee.id,
+        )
+        .join(
+            Task,
+            Task.project_id == ProjectEmployee.project_id,
+        )
+        .filter(
+            Task.assigned_to == current_user.id,
+        )
+        .first()
+    )
+
 
 def update_employee(
     db: Session,
@@ -196,23 +247,19 @@ def delete_employee(
             detail="Not authorized to delete this employee",
         )
 
-    db_employee.is_active = False
-
     if db_employee.user_id:
-        db_user = (
-            db.query(User)
-            .filter(User.id == db_employee.user_id)
-            .first()
+        deactivate_user(
+            db,
+            db_employee.user_id,
+            current_user,
         )
+    else:
+        db_employee.is_active = False
 
-        if db_user:
-            db_user.is_active = False
-            db_user.token_version += 1
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
-    try:
-        db.commit()
-        return True
-
-    except Exception:
-        db.rollback()
-        raise
+    return True

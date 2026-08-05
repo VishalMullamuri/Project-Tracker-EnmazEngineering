@@ -2,6 +2,8 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
+import app.database.base  # noqa: F401
+
 # Import all models so SQLAlchemy registers them
 from alembic import context
 from app.config.config import DATABASE_URL
