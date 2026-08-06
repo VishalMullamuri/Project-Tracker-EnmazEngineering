@@ -271,4 +271,23 @@ def delete_employee(
             db.rollback()
             raise
 
+def get_assignable_employees(
+    db: Session,
+    current_user: User,
+):
+    query = (
+        db.query(Employee)
+        .join(
+            User,
+            User.id == Employee.user_id,
+        )
+        .filter(
+            Employee.is_active.is_(True),
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
+        )
+    )
+
+    return query.all()
+
     return True

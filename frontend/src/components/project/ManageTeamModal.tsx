@@ -46,8 +46,7 @@ const ManageTeamModal = ({
       localStorage.getItem("token");
 
     const response =
-      await api.get(
-        "/employees",
+      await api.get("/employees/assignable", 
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -109,52 +108,48 @@ const ManageTeamModal = ({
   };
 
   const saveMembers = async () => {
-
   try {
+    const token = localStorage.getItem("token");
 
+    const current = await api.get(
+      `/project-employees/${projectId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    const token =
-      localStorage.getItem("token");
+    const currentIds: number[] = current.data.map(
+      (member: any) => member.employee_id
+    );
 
-    const current =
-      await api.get(
-        `/project-employees/${projectId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    const toRemove = currentIds.filter(
+      (id) => !selected.includes(id)
+    );
 
+    const toAdd = selected.filter(
+      (id) => !currentIds.includes(id)
+    );
 
-    for (const member of current.data) {
-
-
-      await api.delete(
-  "/project-employees",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          data: {
-            project_id: projectId,
-            employee_id:
-              member.employee_id,
-          },
-        }
-      );
-
+    for (const employee_id of toRemove) {
+      await api.delete("/project-employees", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          project_id: projectId,
+          employee_id,
+        },
+      });
     }
 
-    for (const id of selected) {
-
-
-
+    for (const employee_id of toAdd) {
       await api.post(
-  "/project-employees",
+        "/project-employees",
         {
           project_id: projectId,
-          employee_id: id,
+          employee_id,
         },
         {
           headers: {
@@ -162,24 +157,16 @@ const ManageTeamModal = ({
           },
         }
       );
-
     }
 
     await onSaved();
 
-fetchMembers();
+    await fetchMembers();
 
-onClose();
-
+    onClose();
   } catch (error) {
-
-    console.error(
-      "SAVE TEAM ERROR:",
-      error
-    );
-
+    console.error("SAVE TEAM ERROR:", error);
   }
-
 };
 
   if (!isOpen)

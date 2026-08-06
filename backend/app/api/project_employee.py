@@ -69,20 +69,19 @@ def assign(
         )
 
     if current_user.role != UserRole.ADMIN:
-        manager_can_manage_employee = (
-            db.query(ProjectEmployee)
-            .join(
-                Project,
-                Project.id == ProjectEmployee.project_id,
-            )
+        user = (
+            db.query(User)
             .filter(
-                ProjectEmployee.employee_id == data.employee_id,
-                Project.created_by == current_user.id,
+                User.id == employee.user_id,
+                User.is_active.is_(True),
             )
             .first()
         )
 
-        if not manager_can_manage_employee:
+        if (
+            not user
+            or user.role != UserRole.TEAM_MEMBER
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Employee not found",

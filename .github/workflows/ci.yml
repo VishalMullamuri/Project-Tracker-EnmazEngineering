@@ -50,7 +50,7 @@ jobs:
 
       - name: Run Tests
         env:
-          SECRET_KEY: "ci-only-not-a-real-secret-0123456789abcdef"
+          SECRET_KEY: ${{ secrets.CI_SECRET_KEY }}
           ALGORITHM: HS256
         run: |
           cd backend

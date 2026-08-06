@@ -7,6 +7,7 @@ from app.crud.employee import (
     create_employee,
     delete_employee,
     get_all_employees,
+    get_assignable_employees,
     get_employee_for_user,
     update_employee,
 )
@@ -60,6 +61,25 @@ def get_all(
         db,
         current_user,
     )
+
+
+# ----------------------------------
+# Get Assignable Employees
+# ----------------------------------
+
+@router.get(
+    "/assignable",
+    response_model=list[EmployeeResponse],
+)
+def get_assignable(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_assignable_employees(
+        db,
+        current_user,
+    )
+
 
 # ----------------------------------
 # Get Single Employee
