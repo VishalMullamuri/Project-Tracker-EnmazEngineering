@@ -21,6 +21,7 @@ class EmployeeUpdate(BaseModel):
     email: EmailStr | None = None
     phone: str | None = None
 
+
 class EmployeeResponse(BaseModel):
     id: int
     user_id: int | None = None
@@ -28,6 +29,14 @@ class EmployeeResponse(BaseModel):
     name: str
     email: EmailStr
     phone: str
+
+    class Config:
+        from_attributes = True
+
+
+class AssignableEmployeeResponse(BaseModel):
+    id: int
+    name: str
 
     class Config:
         from_attributes = True

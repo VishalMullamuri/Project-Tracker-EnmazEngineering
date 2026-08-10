@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.permissions import require_admin
+from app.core.permissions import require_admin, require_manager
 from app.core.security import get_current_user
 from app.crud.employee import (
     create_employee,
@@ -14,6 +14,7 @@ from app.crud.employee import (
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.employee import (
+    AssignableEmployeeResponse,
     EmployeeCreate,
     EmployeeResponse,
     EmployeeUpdate,
@@ -69,15 +70,18 @@ def get_all(
 
 @router.get(
     "/assignable",
-    response_model=list[EmployeeResponse],
+    response_model=list[AssignableEmployeeResponse],
 )
 def get_assignable(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_manager),
 ):
     return get_assignable_employees(
         db,
-        current_user,
+        skip,
+        limit,
     )
 
 

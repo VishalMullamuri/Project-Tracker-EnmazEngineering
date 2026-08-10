@@ -29,6 +29,7 @@ def _resolve_project_member(
             Employee.user_id == assigned_to,
             Employee.is_active.is_(True),
             User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
             ProjectEmployee.project_id == project_id,
         )
         .first()

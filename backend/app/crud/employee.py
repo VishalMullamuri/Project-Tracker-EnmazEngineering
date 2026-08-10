@@ -94,9 +94,15 @@ def get_all_employees(
                 Project,
                 Project.id == ProjectEmployee.project_id,
             )
+            .join(
+                User,
+                User.id == Employee.user_id,
+            )
             .filter(
                 Project.created_by == current_user.id,
                 Employee.is_active.is_(True),
+                User.is_active.is_(True),
+                User.role == UserRole.TEAM_MEMBER,
             )
             .distinct()
             .all()
@@ -134,6 +140,7 @@ def get_employee(
         .first()
     )
 
+
 def get_employee_for_user(
     db: Session,
     employee_id: int,
@@ -161,8 +168,14 @@ def get_employee_for_user(
                 Project,
                 Project.id == ProjectEmployee.project_id,
             )
+            .join(
+                User,
+                User.id == Employee.user_id,
+            )
             .filter(
                 Project.created_by == current_user.id,
+                User.is_active.is_(True),
+                User.role == UserRole.TEAM_MEMBER,
             )
             .first()
         )
@@ -262,6 +275,15 @@ def delete_employee(
             db_employee.user_id,
             current_user,
         )
+
+        if db_employee.is_active:
+            db_employee.is_active = False
+
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
     else:
         db_employee.is_active = False
 
@@ -271,9 +293,13 @@ def delete_employee(
             db.rollback()
             raise
 
+    return True
+
+
 def get_assignable_employees(
     db: Session,
-    current_user: User,
+    skip: int = 0,
+    limit: int = 100,
 ):
     query = (
         db.query(Employee)
@@ -286,8 +312,8 @@ def get_assignable_employees(
             User.is_active.is_(True),
             User.role == UserRole.TEAM_MEMBER,
         )
+        .offset(skip)
+        .limit(limit)
     )
 
     return query.all()
-
-    return True
