@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
-
+from sqlalchemy import select
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.sql import Select
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.employee import Employee
@@ -103,3 +104,70 @@ def require_team_member(
         )
 
     return current_user
+
+def visible_employee_ids(
+    db: Session,
+    current_user: User,
+) -> Select:
+    if current_user.role == UserRole.ADMIN:
+        return (
+            select(Employee.id)
+            .filter(
+                Employee.is_active.is_(True),
+            )
+        )
+
+    if current_user.role == UserRole.MANAGER:
+        return (
+            select(Employee.id)
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.employee_id == Employee.id,
+            )
+            .join(
+                Project,
+                Project.id == ProjectEmployee.project_id,
+            )
+            .join(
+                User,
+                User.id == Employee.user_id,
+            )
+            .filter(
+                Project.created_by == current_user.id,
+                Employee.is_active.is_(True),
+                User.is_active.is_(True),
+                User.role == UserRole.TEAM_MEMBER,
+            )
+            .distinct()
+        )
+
+    my_link = aliased(ProjectEmployee)
+    me = aliased(Employee)
+
+    return (
+        select(Employee.id)
+        .join(
+            ProjectEmployee,
+            ProjectEmployee.employee_id == Employee.id,
+        )
+        .join(
+            User,
+            User.id == Employee.user_id,
+        )
+        .join(
+            my_link,
+            my_link.project_id == ProjectEmployee.project_id,
+        )
+        .join(
+            me,
+            me.id == my_link.employee_id,
+        )
+        .filter(
+            me.user_id == current_user.id,
+            me.is_active.is_(True),
+            Employee.is_active.is_(True),
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
+        )
+        .distinct()
+    )

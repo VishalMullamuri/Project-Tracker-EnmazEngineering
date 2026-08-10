@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.database.database import get_db
+from app.models.employee import Employee
 from app.models.project import Project
-from app.models.task import Task
+from app.models.project_employee import ProjectEmployee
 from app.models.user import User, UserRole
 
 router = APIRouter(
@@ -33,19 +34,31 @@ def dashboard_stats(
 
     else:
 
-        assigned_project_ids = (
-            db.query(Task.project_id)
+        employee = (
+            db.query(Employee)
             .filter(
-                Task.assigned_to == current_user.id
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
             )
-            .distinct()
-            .subquery()
+            .first()
         )
 
-        projects = (
-            db.query(Project)
-            .filter(Project.id.in_(assigned_project_ids))
-        )
+        if not employee:
+            projects = db.query(Project).filter(False)
+        else:
+            assigned_project_ids = (
+                db.query(ProjectEmployee.project_id)
+                .filter(
+                    ProjectEmployee.employee_id == employee.id,
+                )
+                .distinct()
+                .subquery()
+            )
+
+            projects = (
+                db.query(Project)
+                .filter(Project.id.in_(assigned_project_ids))
+            )
 
     total_projects = projects.count()
 

@@ -2,14 +2,16 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.permissions import visible_employee_ids
 from app.core.security import hash_password
 from app.crud.user import deactivate_user
 from app.models.employee import Employee
-from app.models.project import Project
-from app.models.project_employee import ProjectEmployee
-from app.models.task import Task
 from app.models.user import User, UserRole
-from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeUpdate,
+    TeamMemberEmployeeResponse,
+)
 
 
 def create_employee(
@@ -37,7 +39,7 @@ def create_employee(
             name=employee.name,
             email=employee.email,
             password=hash_password(employee.password),
-            role=employee.role,
+            role=UserRole.TEAM_MEMBER,
             is_active=True,
         )
 
@@ -83,48 +85,29 @@ def get_all_employees(
             .all()
         )
 
-    if current_user.role == UserRole.MANAGER:
-        return (
-            db.query(Employee)
-            .join(
-                ProjectEmployee,
-                ProjectEmployee.employee_id == Employee.id,
-            )
-            .join(
-                Project,
-                Project.id == ProjectEmployee.project_id,
-            )
-            .join(
-                User,
-                User.id == Employee.user_id,
-            )
-            .filter(
-                Project.created_by == current_user.id,
-                Employee.is_active.is_(True),
-                User.is_active.is_(True),
-                User.role == UserRole.TEAM_MEMBER,
-            )
-            .distinct()
-            .all()
-        )
-
-    return (
+    employees = (
         db.query(Employee)
-        .join(
-            ProjectEmployee,
-            Employee.id == ProjectEmployee.employee_id,
-        )
-        .join(
-            Task,
-            Task.project_id == ProjectEmployee.project_id,
-        )
         .filter(
-            Task.assigned_to == current_user.id,
-            Employee.is_active.is_(True),
+            Employee.id.in_(
+                visible_employee_ids(
+                    db,
+                    current_user,
+                )
+            )
         )
-        .distinct()
         .all()
     )
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        return [
+            TeamMemberEmployeeResponse(
+                id=employee.id,
+                name=employee.name,
+            )
+            for employee in employees
+        ]
+
+    return employees
 
 
 def get_employee(
@@ -157,44 +140,29 @@ def get_employee_for_user(
     if current_user.role == UserRole.ADMIN:
         return query.first()
 
-    if current_user.role == UserRole.MANAGER:
-        return (
-            query
-            .join(
-                ProjectEmployee,
-                ProjectEmployee.employee_id == Employee.id,
-            )
-            .join(
-                Project,
-                Project.id == ProjectEmployee.project_id,
-            )
-            .join(
-                User,
-                User.id == Employee.user_id,
-            )
-            .filter(
-                Project.created_by == current_user.id,
-                User.is_active.is_(True),
-                User.role == UserRole.TEAM_MEMBER,
-            )
-            .first()
-        )
-
-    return (
+    employee = (
         query
-        .join(
-            ProjectEmployee,
-            ProjectEmployee.employee_id == Employee.id,
-        )
-        .join(
-            Task,
-            Task.project_id == ProjectEmployee.project_id,
-        )
         .filter(
-            Task.assigned_to == current_user.id,
+            Employee.id.in_(
+                visible_employee_ids(
+                    db,
+                    current_user,
+                )
+            )
         )
         .first()
     )
+
+    if not employee:
+        return None
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        return TeamMemberEmployeeResponse(
+            id=employee.id,
+            name=employee.name,
+        )
+
+    return employee
 
 
 def update_employee(
@@ -298,19 +266,20 @@ def delete_employee(
 
 def get_assignable_employees(
     db: Session,
+    current_user: User,
     skip: int = 0,
     limit: int = 100,
 ):
     query = (
         db.query(Employee)
-        .join(
-            User,
-            User.id == Employee.user_id,
-        )
         .filter(
+            Employee.id.in_(
+                visible_employee_ids(
+                    db,
+                    current_user,
+                )
+            ),
             Employee.is_active.is_(True),
-            User.is_active.is_(True),
-            User.role == UserRole.TEAM_MEMBER,
         )
         .offset(skip)
         .limit(limit)

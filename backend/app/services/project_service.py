@@ -9,7 +9,8 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
 )
-
+from app.models.employee import Employee
+from app.models.project_employee import ProjectEmployee
 
 def calculate_progress(
     db: Session,
@@ -95,11 +96,16 @@ def get_all_projects(
         projects = (
             db.query(Project)
             .join(
-                Task,
-                Project.id == Task.project_id,
+                ProjectEmployee,
+                ProjectEmployee.project_id == Project.id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.assigned_to == current_user.id
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
             )
             .distinct()
             .all()
@@ -116,6 +122,8 @@ def get_all_projects(
             project.status = "In Progress"
 
     return projects
+
+
 def get_project_by_id(
     db: Session,
     project_id: int,
@@ -136,12 +144,18 @@ def get_project_by_id(
 
     else:
         query = (
-            query.join(
-                Task,
-                Project.id == Task.project_id,
+            query
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Project.id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.assigned_to == current_user.id
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
             )
         )
 

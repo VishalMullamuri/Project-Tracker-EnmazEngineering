@@ -18,6 +18,7 @@ from app.schemas.employee import (
     EmployeeCreate,
     EmployeeResponse,
     EmployeeUpdate,
+    TeamMemberEmployeeResponse,
 )
 
 router = APIRouter(
@@ -52,7 +53,7 @@ def create(
 
 @router.get(
     "",
-    response_model=list[EmployeeResponse],
+    response_model=list[EmployeeResponse | TeamMemberEmployeeResponse],
 )
 def get_all(
     db: Session = Depends(get_db),
@@ -80,6 +81,7 @@ def get_assignable(
 ):
     return get_assignable_employees(
         db,
+        current_user,
         skip,
         limit,
     )
@@ -91,7 +93,7 @@ def get_assignable(
 
 @router.get(
     "/{employee_id}",
-    response_model=EmployeeResponse,
+    response_model=EmployeeResponse | TeamMemberEmployeeResponse,
 )
 def get(
     employee_id: int,
