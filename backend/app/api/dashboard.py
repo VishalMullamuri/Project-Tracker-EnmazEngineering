@@ -22,18 +22,12 @@ def dashboard_stats(
 ):
 
     if current_user.role == UserRole.ADMIN:
-
         projects = db.query(Project)
 
     elif current_user.role == UserRole.MANAGER:
-
-        projects = (
-            db.query(Project)
-            .filter(Project.created_by == current_user.id)
-        )
+        projects = db.query(Project).filter(Project.created_by == current_user.id)
 
     else:
-
         employee = (
             db.query(Employee)
             .filter(
@@ -55,46 +49,33 @@ def dashboard_stats(
                 .subquery()
             )
 
-            projects = (
-                db.query(Project)
-                .filter(Project.id.in_(assigned_project_ids))
-            )
+            projects = db.query(Project).filter(Project.id.in_(assigned_project_ids))
 
     total_projects = projects.count()
 
-    completed_projects = (
-        projects.filter(
-            Project.progress == 100
-        ).count()
-    )
+    completed_projects = projects.filter(Project.progress == 100).count()
 
-    delayed_projects = (
-        projects.filter(
-            and_(
-                Project.progress < 100,
-                Project.end_date < func.current_date(),
-            )
-        ).count()
-    )
+    delayed_projects = projects.filter(
+        and_(
+            Project.progress < 100,
+            Project.end_date < func.current_date(),
+        )
+    ).count()
 
-    not_started_projects = (
-        projects.filter(
-            and_(
-                Project.progress == 0,
-                Project.end_date >= func.current_date(),
-            )
-        ).count()
-    )
+    not_started_projects = projects.filter(
+        and_(
+            Project.progress == 0,
+            Project.end_date >= func.current_date(),
+        )
+    ).count()
 
-    active_projects = (
-        projects.filter(
-            and_(
-                Project.progress > 0,
-                Project.progress < 100,
-                Project.end_date >= func.current_date(),
-            )
-        ).count()
-    )
+    active_projects = projects.filter(
+        and_(
+            Project.progress > 0,
+            Project.progress < 100,
+            Project.end_date >= func.current_date(),
+        )
+    ).count()
 
     return {
         "total_projects": total_projects,

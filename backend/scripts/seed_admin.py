@@ -16,13 +16,13 @@ def seed_admin():
 
     try:
         existing_admin = (
-    db.query(User)
-    .filter(
-        User.role == UserRole.ADMIN,
-        User.is_active.is_(True),
-    )
-    .first()
-)
+            db.query(User)
+            .filter(
+                User.role == UserRole.ADMIN,
+                User.is_active.is_(True),
+            )
+            .first()
+        )
 
         if existing_admin:
             print("Seed skipped: an admin user already exists.")

@@ -9,7 +9,6 @@ from app.database.database import Base
 
 
 class ProjectEmployee(Base):
-
     __tablename__ = "project_employees"
 
     __table_args__ = (

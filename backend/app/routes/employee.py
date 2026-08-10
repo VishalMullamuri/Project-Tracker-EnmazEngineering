@@ -12,7 +12,7 @@ from app.crud.employee import (
     update_employee,
 )
 from app.database.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.employee import (
     AssignableEmployeeResponse,
     EmployeeCreate,
@@ -26,10 +26,10 @@ router = APIRouter(
     tags=["Employees"],
 )
 
-
 # ----------------------------------
 # Create Employee (Admin Only)
 # ----------------------------------
+
 
 @router.post(
     "",
@@ -51,23 +51,36 @@ def create(
 # Get All Employees
 # ----------------------------------
 
+
 @router.get(
     "",
-    response_model=list[EmployeeResponse | TeamMemberEmployeeResponse],
+    response_model=list[EmployeeResponse],
 )
 def get_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return get_all_employees(
+    employees = get_all_employees(
         db,
         current_user,
     )
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        return [
+            TeamMemberEmployeeResponse(
+                id=employee.id,
+                name=employee.name,
+            )
+            for employee in employees
+        ]
+
+    return employees
 
 
 # ----------------------------------
 # Get Assignable Employees
 # ----------------------------------
+
 
 @router.get(
     "/assignable",
@@ -91,9 +104,10 @@ def get_assignable(
 # Get Single Employee
 # ----------------------------------
 
+
 @router.get(
     "/{employee_id}",
-    response_model=EmployeeResponse | TeamMemberEmployeeResponse,
+    response_model=EmployeeResponse,
 )
 def get(
     employee_id: int,
@@ -112,12 +126,19 @@ def get(
             detail="Employee not found",
         )
 
+    if current_user.role == UserRole.TEAM_MEMBER:
+        return TeamMemberEmployeeResponse(
+            id=employee.id,
+            name=employee.name,
+        )
+
     return employee
 
 
 # ----------------------------------
 # Update Employee
 # ----------------------------------
+
 
 @router.put(
     "/{employee_id}",
@@ -148,6 +169,7 @@ def update(
 # ----------------------------------
 # Delete Employee (Admin Only)
 # ----------------------------------
+
 
 @router.delete(
     "/{employee_id}",

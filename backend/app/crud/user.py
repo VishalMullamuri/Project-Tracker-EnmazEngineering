@@ -16,11 +16,7 @@ def deactivate_user(
             detail="You cannot deactivate your own account",
         )
 
-    user = (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
-    )
+    user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(
@@ -48,14 +44,9 @@ def deactivate_user(
                 detail="Cannot deactivate the last active admin",
             )
 
-
     user.is_active = False
     user.token_version += 1
-    employee = (
-        db.query(Employee)
-        .filter(Employee.user_id == user.id)
-        .first()
-    )
+    employee = db.query(Employee).filter(Employee.user_id == user.id).first()
 
     if employee:
         employee.is_active = False
@@ -65,15 +56,12 @@ def deactivate_user(
 
     return user
 
+
 def activate_user(
     db: Session,
     user_id: int,
 ):
-    user = (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
-    )
+    user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(
@@ -85,20 +73,12 @@ def activate_user(
         return user
 
     user.is_active = True
-    employee = (
-        db.query(Employee)
-        .filter(Employee.user_id == user.id)
-        .first()
-    )
+    employee = db.query(Employee).filter(Employee.user_id == user.id).first()
 
     if employee:
         employee.is_active = True
     user.token_version += 1
-    employee = (
-        db.query(Employee)
-        .filter(Employee.user_id == user.id)
-        .first()
-    )
+    employee = db.query(Employee).filter(Employee.user_id == user.id).first()
 
     if employee:
         employee.is_active = True

@@ -49,15 +49,12 @@ def remove_employee(
 
     db.commit()
 
+
 def get_project_employees(
     db: Session,
     project_id: int,
 ):
 
     return (
-        db.query(ProjectEmployee)
-        .filter(
-            ProjectEmployee.project_id == project_id
-        )
-        .all()
+        db.query(ProjectEmployee).filter(ProjectEmployee.project_id == project_id).all()
     )

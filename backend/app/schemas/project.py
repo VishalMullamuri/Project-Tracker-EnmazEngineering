@@ -20,9 +20,7 @@ class ProjectCreate(BaseModel):
     @model_validator(mode="after")
     def validate_dates(self):
         if self.end_date < self.start_date:
-            raise ValueError(
-                "end_date cannot be before start_date"
-            )
+            raise ValueError("end_date cannot be before start_date")
         return self
 
 
@@ -42,10 +40,7 @@ class ProjectUpdate(BaseModel):
             "start_date",
             "end_date",
         ):
-            if (
-                field in self.model_fields_set
-                and getattr(self, field) is None
-            ):
+            if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
 
         return self
@@ -57,9 +52,7 @@ class ProjectUpdate(BaseModel):
             and self.end_date is not None
             and self.end_date < self.start_date
         ):
-            raise ValueError(
-                "end_date cannot be before start_date"
-            )
+            raise ValueError("end_date cannot be before start_date")
 
         return self
 
@@ -67,7 +60,7 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(BaseModel):
     id: int
     project_name: str
-    description: str
+    description: str | None = None
     progress: int
     start_date: date
     end_date: date

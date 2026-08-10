@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.permissions import (
     require_manager,
     require_manager_or_project_member,
+    visible_employee_ids,
 )
 from app.crud.project_employee import (
     assign_employee,
@@ -35,15 +36,10 @@ def assign(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == data.project_id)
-    )
+    query = db.query(Project).filter(Project.id == data.project_id)
 
     if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     project = query.first()
 
@@ -58,6 +54,12 @@ def assign(
         .filter(
             Employee.id == data.employee_id,
             Employee.is_active.is_(True),
+            Employee.id.in_(
+                visible_employee_ids(
+                    db,
+                    current_user,
+                )
+            ),
         )
         .first()
     )
@@ -68,24 +70,21 @@ def assign(
             detail="Employee not found",
         )
 
-    if current_user.role != UserRole.ADMIN:
-        user = (
-            db.query(User)
-            .filter(
-                User.id == employee.user_id,
-                User.is_active.is_(True),
-            )
-            .first()
+    user = (
+        db.query(User)
+        .filter(
+            User.id == employee.user_id,
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
         )
+        .first()
+    )
 
-        if (
-            not user
-            or user.role != UserRole.TEAM_MEMBER
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Employee not found",
-            )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found",
+        )
 
     return assign_employee(
         db,
@@ -104,15 +103,10 @@ def remove(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == data.project_id)
-    )
+    query = db.query(Project).filter(Project.id == data.project_id)
 
     if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     project = query.first()
 
@@ -128,9 +122,7 @@ def remove(
         data.employee_id,
     )
 
-    return {
-        "message": "Employee removed successfully"
-    }
+    return {"message": "Employee removed successfully"}
 
 
 # ----------------------------------
@@ -145,15 +137,10 @@ def get_all_assignments(
     query = db.query(ProjectEmployee)
 
     if current_user.role != UserRole.ADMIN:
-        query = (
-            query.join(
-                Project,
-                Project.id == ProjectEmployee.project_id,
-            )
-            .filter(
-                Project.created_by == current_user.id
-            )
-        )
+        query = query.join(
+            Project,
+            Project.id == ProjectEmployee.project_id,
+        ).filter(Project.created_by == current_user.id)
 
     return query.all()
 
@@ -168,7 +155,27 @@ def get_members(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_project_member),
 ):
-    return get_project_employees(
+    assignments = get_project_employees(
         db,
         project_id,
     )
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        visible_ids = set(
+            db.execute(
+                visible_employee_ids(
+                    db,
+                    current_user,
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        return [
+            assignment
+            for assignment in assignments
+            if assignment.employee_id in visible_ids
+        ]
+
+    return assignments  

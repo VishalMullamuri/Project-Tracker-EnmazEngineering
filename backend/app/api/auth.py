@@ -33,9 +33,8 @@ pwd_context = CryptContext(
     deprecated="auto",
 )
 
-DUMMY_PASSWORD_HASH = pwd_context.hash(
-    "dummy-password-for-timing"
-)
+DUMMY_PASSWORD_HASH = pwd_context.hash("dummy-password-for-timing")
+
 
 # -----------------------------------
 # Register User
@@ -53,11 +52,7 @@ def register_user(
     current_user: User = Depends(require_admin),
 ):
 
-    existing_user = (
-        db.query(User)
-        .filter(User.email == user.email)
-        .first()
-    )
+    existing_user = db.query(User).filter(User.email == user.email).first()
 
     if existing_user:
         raise HTTPException(
@@ -94,11 +89,7 @@ def login_user(
     db: Session = Depends(get_db),
 ):
 
-    db_user = (
-        db.query(User)
-        .filter(User.email == user.email)
-        .first()
-    )
+    db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user:
         verify_password(
@@ -135,11 +126,11 @@ def login_user(
     )
 
     return {
-    "access_token": access_token,
-    "token_type": "bearer",
-    "role": db_user.role,
-    "first_login": db_user.first_login,
-}
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": db_user.role,
+        "first_login": db_user.first_login,
+    }
 
 
 # -----------------------------------
@@ -153,6 +144,7 @@ def get_logged_in_user(
     current_user: User = Depends(get_current_user),
 ):
     return current_user
+
 
 # -----------------------------------
 # Admin Only Route
@@ -195,11 +187,12 @@ def team_member_only(
         "role": current_user.role,
     }
 
+
 # -----------------------------------
 # Change Password
 # -----------------------------------
 @router.put("/change-password")
-@limiter.limit("5/minute")  
+@limiter.limit("5/minute")
 def change_password(
     request: Request,
     response: Response,
@@ -217,9 +210,7 @@ def change_password(
             detail="Current password is incorrect",
         )
 
-    current_user.password = hash_password(
-        data.new_password
-    )
+    current_user.password = hash_password(data.new_password)
 
     current_user.first_login = False
     current_user.token_version += 1
@@ -239,4 +230,4 @@ def change_password(
         "token_type": "bearer",
         "role": current_user.role,
         "first_login": False,
-}
+    }

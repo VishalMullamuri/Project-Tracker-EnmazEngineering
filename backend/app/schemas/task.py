@@ -42,10 +42,7 @@ class TaskCreate(BaseModel):
             "start_date",
             "due_date",
         ):
-            if (
-                field in self.model_fields_set
-                and getattr(self, field) is None
-            ):
+            if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
 
         return self
@@ -74,10 +71,7 @@ class TaskUpdate(BaseModel):
             "start_date",
             "due_date",
         ):
-            if (
-                field in self.model_fields_set
-                and getattr(self, field) is None
-            ):
+            if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
 
         return self

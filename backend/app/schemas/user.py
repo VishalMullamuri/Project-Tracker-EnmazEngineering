@@ -21,6 +21,7 @@ class ChangePassword(BaseModel):
     current_password: str
     new_password: Annotated[str, Field(min_length=12, max_length=72)]
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str

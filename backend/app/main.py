@@ -59,25 +59,23 @@ origins = [
 ]
 
 if "*" in origins:
-    raise RuntimeError(
-        "CORS_ORIGINS cannot contain '*' when allow_credentials=True."
-    )
+    raise RuntimeError("CORS_ORIGINS cannot contain '*' when allow_credentials=True.")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=[
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-],
-allow_headers=[
-    "Authorization",
-    "Content-Type",
-],
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+    ],
 )
 
 # -----------------------------------
@@ -89,12 +87,8 @@ allowed_hosts = os.getenv("ALLOWED_HOSTS")
 if allowed_hosts:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=[
-            host.strip()
-            for host in allowed_hosts.split(",")
-        ],
+        allowed_hosts=[host.strip() for host in allowed_hosts.split(",")],
     )
-
 
 
 @app.middleware("http")
@@ -144,16 +138,16 @@ app.include_router(users_router)
 # Root
 # -----------------------------------
 
+
 @app.get("/")
 def root():
-    return {
-        "message": "Project Tracker Backend is Running 🚀"
-    }
+    return {"message": "Project Tracker Backend is Running 🚀"}
 
 
 # -----------------------------------
 # Health Check
 # -----------------------------------
+
 
 @app.get("/health")
 def health_check():

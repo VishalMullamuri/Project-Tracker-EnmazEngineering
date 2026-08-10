@@ -79,11 +79,7 @@ def get_all_employees(
     current_user: User,
 ):
     if current_user.role == UserRole.ADMIN:
-        return (
-            db.query(Employee)
-            .filter(Employee.is_active.is_(True))
-            .all()
-        )
+        return db.query(Employee).filter(Employee.is_active.is_(True)).all()
 
     employees = (
         db.query(Employee)
@@ -129,29 +125,22 @@ def get_employee_for_user(
     employee_id: int,
     current_user: User,
 ):
-    query = (
-        db.query(Employee)
-        .filter(
-            Employee.id == employee_id,
-            Employee.is_active.is_(True),
-        )
+    query = db.query(Employee).filter(
+        Employee.id == employee_id,
+        Employee.is_active.is_(True),
     )
 
     if current_user.role == UserRole.ADMIN:
         return query.first()
 
-    employee = (
-        query
-        .filter(
-            Employee.id.in_(
-                visible_employee_ids(
-                    db,
-                    current_user,
-                )
+    employee = query.filter(
+        Employee.id.in_(
+            visible_employee_ids(
+                db,
+                current_user,
             )
         )
-        .first()
-    )
+    ).first()
 
     if not employee:
         return None
@@ -185,11 +174,7 @@ def update_employee(
         setattr(db_employee, field, value)
 
     if db_employee.user_id:
-        db_user = (
-            db.query(User)
-            .filter(User.id == db_employee.user_id)
-            .first()
-        )
+        db_user = db.query(User).filter(User.id == db_employee.user_id).first()
 
         if db_user:
             if "name" in update_data:
@@ -272,14 +257,14 @@ def get_assignable_employees(
 ):
     query = (
         db.query(Employee)
+        .join(
+            User,
+            User.id == Employee.user_id,
+        )
         .filter(
-            Employee.id.in_(
-                visible_employee_ids(
-                    db,
-                    current_user,
-                )
-            ),
             Employee.is_active.is_(True),
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
         )
         .offset(skip)
         .limit(limit)

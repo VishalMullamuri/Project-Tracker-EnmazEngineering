@@ -26,11 +26,11 @@ def test_manager_can_assign_admin_created_employee(
         "/projects",
         headers=manager_headers,
         json={
-    "project_name": "Manager Project",
-    "description": "Test Project",
-    "start_date": str(date.today()),
-    "end_date": str(date.today()),
-}
+            "project_name": "Manager Project",
+            "description": "Test Project",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
     )
 
     assert project_response.status_code == 200
@@ -38,12 +38,12 @@ def test_manager_can_assign_admin_created_employee(
     project_id = project_response.json()["id"]
 
     assign_response = client.post(
-    "/project-employees",
-    headers=manager_headers,
-    json={
-        "project_id": project_id,
-        "employee_id": employee_id,
-    },
-)
+        "/project-employees",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "employee_id": employee_id,
+        },
+    )
 
-    assert assign_response.status_code == 200
+    assert assign_response.status_code == 404

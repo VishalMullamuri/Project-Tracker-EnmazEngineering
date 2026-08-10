@@ -1,5 +1,3 @@
-
-
 def test_login_success(client, admin_user):
     response = client.post(
         "/auth/login",
@@ -176,6 +174,7 @@ def test_new_password_works(
 
     assert response.status_code == 200
 
+
 def test_token_for_deleted_user(
     client,
     db,
@@ -205,6 +204,7 @@ def test_token_for_deleted_user(
     )
 
     assert response.status_code == 401
+
 
 def test_weak_password_rejected(
     client,

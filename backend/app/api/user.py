@@ -25,9 +25,7 @@ def get_users(
         query = db.query(User)
 
         if not include_inactive:
-            query = query.filter(
-                User.is_active.is_(True)
-            )
+            query = query.filter(User.is_active.is_(True))
 
         users = query.all()
 

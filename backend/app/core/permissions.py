@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import Select
+
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.employee import Employee
@@ -64,11 +65,7 @@ def require_manager_or_project_member(
 
         return current_user
 
-    employee = (
-        db.query(Employee)
-        .filter(Employee.user_id == current_user.id)
-        .first()
-    )
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
 
     if not employee:
         raise HTTPException(
@@ -105,16 +102,14 @@ def require_team_member(
 
     return current_user
 
+
 def visible_employee_ids(
     db: Session,
     current_user: User,
 ) -> Select:
     if current_user.role == UserRole.ADMIN:
-        return (
-            select(Employee.id)
-            .filter(
-                Employee.is_active.is_(True),
-            )
+        return select(Employee.id).filter(
+            Employee.is_active.is_(True),
         )
 
     if current_user.role == UserRole.MANAGER:
@@ -144,7 +139,12 @@ def visible_employee_ids(
     my_link = aliased(ProjectEmployee)
     me = aliased(Employee)
 
-    return (
+    own = select(Employee.id).filter(
+        Employee.user_id == current_user.id,
+        Employee.is_active.is_(True),
+    )
+
+    peers = (
         select(Employee.id)
         .join(
             ProjectEmployee,
@@ -171,3 +171,5 @@ def visible_employee_ids(
         )
         .distinct()
     )
+
+    return own.union(peers)

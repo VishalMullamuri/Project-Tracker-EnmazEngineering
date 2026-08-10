@@ -10,10 +10,7 @@ from app.config.config import DATABASE_URL
 from app.database.database import Base
 
 config = context.config
-config.set_main_option(
-    "sqlalchemy.url",
-    DATABASE_URL.replace("%", "%%")
-)
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 
 if config.config_file_name is not None:
@@ -36,10 +33,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     connectable = engine_from_config(
-    config.get_section(config.config_ini_section, {}),
-    prefix="sqlalchemy.",
-    poolclass=pool.NullPool,
-)
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
     with connectable.connect() as connection:
         context.configure(
             connection=connection,

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from app.models.employee import Employee
+from app.models.project_employee import ProjectEmployee
 from app.core.permissions import require_manager
 from app.core.security import get_current_user
 from app.database.database import get_db
@@ -29,6 +30,7 @@ router = APIRouter(
 # Create Task (Manager Only)
 # ----------------------------------
 
+
 @router.post("", response_model=TaskResponse)
 def create_new_task(
     task: TaskCreate,
@@ -46,6 +48,7 @@ def create_new_task(
 # Get All Tasks
 # ----------------------------------
 
+
 @router.get("", response_model=list[TaskResponse])
 def get_tasks(
     db: Session = Depends(get_db),
@@ -61,6 +64,7 @@ def get_tasks(
 # Team Member Dashboard Summary
 # ----------------------------------
 
+
 @router.get("/my-work")
 def my_work_summary(
     db: Session = Depends(get_db),
@@ -69,36 +73,30 @@ def my_work_summary(
 
     tasks = (
         db.query(Task)
+        .join(
+            ProjectEmployee,
+            ProjectEmployee.project_id == Task.project_id,
+        )
+        .join(
+            Employee,
+            Employee.id == ProjectEmployee.employee_id,
+        )
         .filter(
-            Task.assigned_to == current_user.id
+            Employee.user_id == current_user.id,
+            Employee.is_active.is_(True),
         )
         .all()
     )
 
-    project_ids = {
-        task.project_id
-        for task in tasks
-    }
+    project_ids = {task.project_id for task in tasks}
 
     total_projects = len(project_ids)
 
     total_tasks = len(tasks)
 
-    open_tasks = len(
-        [
-            task
-            for task in tasks
-            if task.status != "Completed"
-        ]
-    )
+    open_tasks = len([task for task in tasks if task.status != "Completed"])
 
-    closed_tasks = len(
-        [
-            task
-            for task in tasks
-            if task.status == "Completed"
-        ]
-    )
+    closed_tasks = len([task for task in tasks if task.status == "Completed"])
 
     return {
         "total_projects": total_projects,
@@ -112,6 +110,7 @@ def my_work_summary(
 # Get Single Task
 # ----------------------------------
 
+
 @router.get("/{task_id}", response_model=TaskResponse)
 def get_single_task(
     task_id: int,
@@ -119,10 +118,10 @@ def get_single_task(
     current_user: User = Depends(get_current_user),
 ):
     task = get_task(
-    db,
-    task_id,
-    current_user,
-)
+        db,
+        task_id,
+        current_user,
+    )
 
     if not task:
         raise HTTPException(
@@ -136,6 +135,7 @@ def get_single_task(
 # ----------------------------------
 # Update Task
 # ----------------------------------
+
 
 @router.put("/{task_id}", response_model=TaskResponse)
 def edit_task(
@@ -158,6 +158,7 @@ def edit_task(
 # Delete Task (Manager Only)
 # ----------------------------------
 
+
 @router.delete("/{task_id}")
 def remove_task(
     task_id: int,
@@ -165,10 +166,10 @@ def remove_task(
     current_user: User = Depends(require_manager),
 ):
     deleted = delete_task(
-    db,
-    task_id,
-    current_user,
-)
+        db,
+        task_id,
+        current_user,
+    )
 
     if not deleted:
         raise HTTPException(
@@ -176,6 +177,4 @@ def remove_task(
             detail="Task not found",
         )
 
-    return {
-        "message": "Task deleted successfully"
-    }
+    return {"message": "Task deleted successfully"}

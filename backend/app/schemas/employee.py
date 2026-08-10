@@ -30,6 +30,7 @@ class EmployeeResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TeamMemberEmployeeResponse(BaseModel):
     id: int
     name: str

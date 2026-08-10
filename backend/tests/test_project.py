@@ -126,10 +126,7 @@ def test_delete_project(
 
     assert delete_response.status_code == 200
 
-    assert (
-        delete_response.json()["message"]
-        == "Project deleted successfully"
-    )
+    assert delete_response.json()["message"] == "Project deleted successfully"
 
 
 def test_team_member_cannot_create_project(
@@ -148,7 +145,6 @@ def test_team_member_cannot_create_project(
     )
 
     assert response.status_code == 403
-
 
 
 def test_dashboard_counts_match_project_list(
@@ -218,18 +214,14 @@ def test_dashboard_counts_match_project_list(
 
     assert stats["total_projects"] == len(project_list)
     assert stats["completed_projects"] == sum(
-        p["status"] == "Completed"
-        for p in project_list
+        p["status"] == "Completed" for p in project_list
     )
     assert stats["active_projects"] == sum(
-        p["status"] == "In Progress"
-        for p in project_list
+        p["status"] == "In Progress" for p in project_list
     )
     assert stats["delayed_projects"] == sum(
-        p["status"] == "Delayed"
-        for p in project_list
+        p["status"] == "Delayed" for p in project_list
     )
     assert stats["not_started_projects"] == sum(
-        p["status"] == "Not Started"
-        for p in project_list
+        p["status"] == "Not Started" for p in project_list
     )

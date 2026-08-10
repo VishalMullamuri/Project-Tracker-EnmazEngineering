@@ -32,6 +32,7 @@ router = APIRouter(
 # Create Project
 # ------------------------------------
 
+
 @router.post(
     "",
     response_model=ProjectResponse,
@@ -52,6 +53,7 @@ def create_new_project(
 # Get All Projects
 # ------------------------------------
 
+
 @router.get(
     "",
     response_model=list[ProjectResponse],
@@ -69,6 +71,7 @@ def get_projects(
 # ------------------------------------
 # Get Project By ID
 # ------------------------------------
+
 
 @router.get(
     "/{project_id}",
@@ -98,6 +101,7 @@ def get_project(
 # Update Project
 # ------------------------------------
 
+
 @router.put(
     "/{project_id}",
     response_model=ProjectResponse,
@@ -109,11 +113,11 @@ def edit_project(
     current_user: User = Depends(require_manager),
 ):
     updated_project = update_project(
-    db,
-    project_id,
-    project,
-    current_user,
-)
+        db,
+        project_id,
+        project,
+        current_user,
+    )
 
     if not updated_project:
         raise HTTPException(
@@ -128,19 +132,18 @@ def edit_project(
 # Delete Project
 # ------------------------------------
 
-@router.delete(
-    "/{project_id}"
-)
+
+@router.delete("/{project_id}")
 def remove_project(
     project_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
     deleted = delete_project(
-    db,
-    project_id,
-    current_user,
-)
+        db,
+        project_id,
+        current_user,
+    )
 
     if not deleted:
         raise HTTPException(
@@ -148,6 +151,4 @@ def remove_project(
             detail="Project not found",
         )
 
-    return {
-        "message": "Project deleted successfully"
-    }
+    return {"message": "Project deleted successfully"}

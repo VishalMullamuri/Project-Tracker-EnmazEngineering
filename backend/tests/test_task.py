@@ -3,32 +3,36 @@ from datetime import date
 import pytest
 
 
-def create_task(client, manager_headers, employee_user):
-
+def create_task(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     project = client.post(
         "/projects",
         headers=manager_headers,
         json={
-    "project_name": "Task Project",
-    "description": "Testing",
-    "start_date": str(date.today()),
-    "end_date": str(date.today()),
-},
-    )
-
-    
-
-    project_id = project.json()["id"]
-    assign = client.post(
-        "/project-employees",
-        headers=manager_headers,
-        json={
-            "project_id": project_id,
-            "employee_id": employee_user.id,
+            "project_name": "Task Project",
+            "description": "Testing",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
         },
     )
 
-    assert assign.status_code == 200
+    assert project.status_code == 200
+
+    project_id = project.json()["id"]
+
+    from app.models.project_employee import ProjectEmployee
+
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=employee_user.id,
+        )
+    )
+    db.flush()
 
     task = client.post(
         "/tasks",
@@ -44,27 +48,39 @@ def create_task(client, manager_headers, employee_user):
         },
     )
 
+    assert task.status_code == 200
 
     return task.json()
 
-def test_create_task(client, manager_headers, employee_user):
 
+def test_create_task(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     assert task["title"] == "Task 1"
     assert task["status"] == "Pending"
 
 
-def test_get_all_tasks(client, manager_headers, employee_user):
-
+def test_get_all_tasks(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.get(
@@ -76,12 +92,17 @@ def test_get_all_tasks(client, manager_headers, employee_user):
     assert len(response.json()) > 0
 
 
-def test_get_single_task(client, manager_headers, employee_user):
-
+def test_get_single_task(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.get(
@@ -93,12 +114,17 @@ def test_get_single_task(client, manager_headers, employee_user):
     assert response.json()["id"] == task["id"]
 
 
-def test_update_task(client, manager_headers, employee_user):
-
+def test_update_task(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.put(
@@ -120,12 +146,17 @@ def test_update_task(client, manager_headers, employee_user):
     assert response.json()["status"] == "Completed"
 
 
-def test_delete_task(client, manager_headers, employee_user):
-
+def test_delete_task(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.delete(
@@ -141,7 +172,6 @@ def test_team_member_cannot_create_task(
     employee_headers,
     employee_user,
 ):
-
     response = client.post(
         "/tasks",
         headers=employee_headers,
@@ -164,12 +194,13 @@ def test_get_my_work(
     manager_headers,
     employee_headers,
     employee_user,
+    db,
 ):
-
     create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.get(
@@ -179,16 +210,19 @@ def test_get_my_work(
 
     assert response.status_code == 200
 
+
 def test_team_member_can_update_own_task(
     client,
     manager_headers,
     employee_headers,
     employee_user,
+    db,
 ):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.put(
@@ -210,11 +244,13 @@ def test_team_member_cannot_delete_task(
     manager_headers,
     employee_headers,
     employee_user,
+    db,
 ):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.delete(
@@ -224,15 +260,18 @@ def test_team_member_cannot_delete_task(
 
     assert response.status_code == 403
 
+
 def test_manager_partial_update(
     client,
     manager_headers,
     employee_user,
+    db,
 ):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.put(
@@ -258,6 +297,7 @@ def test_team_member_cannot_update_others_task(
     db,
 ):
     from app.core.security import hash_password
+    from app.models.employee import Employee
     from app.models.user import User, UserRole
 
     other_user = User(
@@ -269,8 +309,6 @@ def test_team_member_cannot_update_others_task(
         first_login=False,
     )
 
-    from app.models.employee import Employee
-
     db.add(other_user)
     db.flush()
 
@@ -279,20 +317,20 @@ def test_team_member_cannot_update_others_task(
         email=other_user.email,
         phone="9999999999",
         user_id=other_user.id,
-        created_by=manager_user.id,  # replace in next step
+        created_by=manager_user.id,
         is_active=True,
     )
 
     db.add(other_employee)
     db.commit()
     db.refresh(other_user)
-
     db.refresh(other_employee)
 
     task = create_task(
         client,
         manager_headers,
         other_employee,
+        db,
     )
 
     response = client.put(
@@ -304,6 +342,7 @@ def test_team_member_cannot_update_others_task(
     )
 
     assert response.status_code == 404
+
 
 @pytest.mark.parametrize(
     "field",
@@ -321,12 +360,14 @@ def test_task_update_rejects_explicit_nulls(
     client,
     manager_headers,
     employee_user,
+    db,
     field,
 ):
     task = create_task(
         client,
         manager_headers,
         employee_user,
+        db,
     )
 
     response = client.put(

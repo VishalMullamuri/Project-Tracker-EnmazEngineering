@@ -32,6 +32,7 @@ security = HTTPBearer()
 # Password Functions
 # -------------------------------
 
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
@@ -50,6 +51,7 @@ def verify_password(
 # JWT Token Creation
 # -------------------------------
 
+
 def create_access_token(
     data: dict,
     expires_delta: timedelta | None = None,
@@ -59,9 +61,7 @@ def create_access_token(
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
 
@@ -76,6 +76,7 @@ def create_access_token(
 # Get Current Logged-in User
 # -------------------------------
 
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
@@ -89,11 +90,11 @@ def get_current_user(
 
     try:
         payload = jwt.decode(
-        token,
-        SECRET_KEY,
-        algorithms=[ALGORITHM],
-        options={"require": ["exp", "sub"]},
-    )
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"require": ["exp", "sub"]},
+        )
 
         user_id = payload.get("sub")
         token_version = payload.get("token_version")
@@ -106,11 +107,7 @@ def get_current_user(
     except (InvalidTokenError, ValueError, TypeError) as err:
         raise credentials_exception from err
 
-    user = (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
-    )
+    user = db.query(User).filter(User.id == user_id).first()
 
     if user is None or user.token_version != token_version:
         raise credentials_exception

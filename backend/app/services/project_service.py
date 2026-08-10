@@ -2,34 +2,27 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
+from app.models.employee import Employee
 from app.models.project import Project
+from app.models.project_employee import ProjectEmployee
 from app.models.task import Task
 from app.models.user import User, UserRole
 from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
 )
-from app.models.employee import Employee
-from app.models.project_employee import ProjectEmployee
+
 
 def calculate_progress(
     db: Session,
     project_id: int,
 ):
-    project = (
-        db.query(Project)
-        .filter(Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(Project.id == project_id).first()
 
     if not project:
         return 0
 
-    total_tasks = (
-        db.query(Task)
-        .filter(Task.project_id == project_id)
-        .count()
-    )
+    total_tasks = db.query(Task).filter(Task.project_id == project_id).count()
 
     if total_tasks == 0:
         project.progress = 0
@@ -44,9 +37,7 @@ def calculate_progress(
         .count()
     )
 
-    progress = round(
-        (completed_tasks / total_tasks) * 100
-    )
+    progress = round((completed_tasks / total_tasks) * 100)
 
     project.progress = progress
 
@@ -86,11 +77,7 @@ def get_all_projects(
         projects = db.query(Project).all()
 
     elif current_user.role == UserRole.MANAGER:
-        projects = (
-            db.query(Project)
-            .filter(Project.created_by == current_user.id)
-            .all()
-        )
+        projects = db.query(Project).filter(Project.created_by == current_user.id).all()
 
     else:
         projects = (
@@ -129,23 +116,17 @@ def get_project_by_id(
     project_id: int,
     current_user: User,
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == project_id)
-    )
+    query = db.query(Project).filter(Project.id == project_id)
 
     if current_user.role == UserRole.ADMIN:
         pass
 
     elif current_user.role == UserRole.MANAGER:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     else:
         query = (
-            query
-            .join(
+            query.join(
                 ProjectEmployee,
                 ProjectEmployee.project_id == Project.id,
             )
@@ -180,15 +161,10 @@ def update_project(
     project: ProjectUpdate,
     current_user: User,
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == project_id)
-    )
+    query = db.query(Project).filter(Project.id == project_id)
 
     if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     db_project = query.first()
 
@@ -227,15 +203,10 @@ def delete_project(
     project_id: int,
     current_user: User,
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == project_id)
-    )
+    query = db.query(Project).filter(Project.id == project_id)
 
     if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     db_project = query.first()
 

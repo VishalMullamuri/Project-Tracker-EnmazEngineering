@@ -15,9 +15,7 @@ load_dotenv()
 url = os.environ.get("TEST_DATABASE_URL")
 
 if not url or not make_url(url).database.endswith("_test"):
-    pytest.exit(
-        "TEST_DATABASE_URL must be set and name a *_test database"
-    )
+    pytest.exit("TEST_DATABASE_URL must be set and name a *_test database")
 
 os.environ["DATABASE_URL"] = url
 
@@ -208,22 +206,16 @@ def employee_token(client, employee_user):
 @pytest.fixture()
 def admin_headers(admin_token):
 
-    return {
-        "Authorization": f"Bearer {admin_token}"
-    }
+    return {"Authorization": f"Bearer {admin_token}"}
 
 
 @pytest.fixture()
 def manager_headers(manager_token):
 
-    return {
-        "Authorization": f"Bearer {manager_token}"
-    }
+    return {"Authorization": f"Bearer {manager_token}"}
 
 
 @pytest.fixture()
 def employee_headers(employee_token):
 
-    return {
-        "Authorization": f"Bearer {employee_token}"
-    }
+    return {"Authorization": f"Bearer {employee_token}"}

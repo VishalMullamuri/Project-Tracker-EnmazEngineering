@@ -43,20 +43,16 @@ def _resolve_project_member(
 
     return employee
 
+
 def create_task(
     db: Session,
     task: TaskCreate,
     current_user: User,
 ):
-    query = (
-        db.query(Project)
-        .filter(Project.id == task.project_id)
-    )
+    query = db.query(Project).filter(Project.id == task.project_id)
 
     if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     project = query.first()
 
@@ -67,10 +63,10 @@ def create_task(
         )
 
     _resolve_project_member(
-    db,
-    task.project_id,
-    task.assigned_to,
-)
+        db,
+        task.project_id,
+        task.assigned_to,
+    )
 
     db_task = Task(
         project_id=task.project_id,
@@ -124,13 +120,24 @@ def get_all_tasks(
         pass
 
     elif current_user.role == UserRole.MANAGER:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     else:
-        query = query.filter(
-            Task.assigned_to == current_user.id
+        query = (
+            query
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Task.project_id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
+                User.is_active.is_(True),
+            )
         )
 
     tasks = query.all()
@@ -171,13 +178,24 @@ def get_task(
         pass
 
     elif current_user.role == UserRole.MANAGER:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     else:
-        query = query.filter(
-            Task.assigned_to == current_user.id
+        query = (
+            query
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Task.project_id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
+                User.is_active.is_(True),
+            )
         )
 
     result = query.first()
@@ -212,7 +230,22 @@ def update_task(
     )
 
     if role == "TEAM_MEMBER":
-        query = query.filter(Task.assigned_to == current_user.id)
+        query = (
+            query
+            .join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Task.project_id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
+                User.is_active.is_(True),
+            )
+        )
 
     elif role == "MANAGER":
         query = query.filter(Project.created_by == current_user.id)
@@ -230,23 +263,16 @@ def update_task(
     if role == "TEAM_MEMBER":
         allowed_fields = {"status", "remarks"}
 
-        forbidden_fields = sorted(
-            set(update_data.keys()) - allowed_fields
-        )
+        forbidden_fields = sorted(set(update_data.keys()) - allowed_fields)
 
         if forbidden_fields:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "Team members cannot modify: "
-                    + ", ".join(forbidden_fields)
-                ),
+                detail=("Team members cannot modify: " + ", ".join(forbidden_fields)),
             )
 
         update_data = {
-            key: value
-            for key, value in update_data.items()
-            if key in allowed_fields
+            key: value for key, value in update_data.items() if key in allowed_fields
         }
 
     if "assigned_to" in update_data:
@@ -269,11 +295,7 @@ def update_task(
     db.commit()
     db.refresh(db_task)
 
-    project = (
-        db.query(Project)
-        .filter(Project.id == db_task.project_id)
-        .first()
-    )
+    project = db.query(Project).filter(Project.id == db_task.project_id).first()
 
     if project:
         db_task.project_name = project.project_name
@@ -293,9 +315,7 @@ def delete_task(
     )
 
     if current_user.role == UserRole.MANAGER:
-        query = query.filter(
-            Project.created_by == current_user.id
-        )
+        query = query.filter(Project.created_by == current_user.id)
 
     db_task = query.first()
 
