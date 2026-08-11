@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -25,9 +27,13 @@ router = APIRouter(
     tags=["Project Employees"],
 )
 
+logger = logging.getLogger(__name__)
+
+
 # ----------------------------------
 # Assign Employee to Project
 # ----------------------------------
+
 
 @router.post("")
 def assign(
@@ -79,16 +85,27 @@ def assign(
             detail="Employee not found",
         )
 
-    return assign_employee(
+    result = assign_employee(
         db,
         data.project_id,
         data.employee_id,
     )
 
+    logger.info(
+        "Project employee assigned: actor_user_id=%s "
+        "target_employee_id=%s project_id=%s",
+        current_user.id,
+        data.employee_id,
+        data.project_id,
+    )
+
+    return result
+
 
 # ----------------------------------
 # Remove Employee from Project
 # ----------------------------------
+
 
 @router.delete("")
 def remove(
@@ -115,12 +132,21 @@ def remove(
         data.employee_id,
     )
 
+    logger.info(
+        "Project employee removed: actor_user_id=%s "
+        "target_employee_id=%s project_id=%s",
+        current_user.id,
+        data.employee_id,
+        data.project_id,
+    )
+
     return {"message": "Employee removed successfully"}
 
 
 # ----------------------------------
 # Get All Assignments
 # ----------------------------------
+
 
 @router.get("/all")
 def get_all_assignments(
@@ -141,6 +167,7 @@ def get_all_assignments(
 # ----------------------------------
 # Get Members of a Project
 # ----------------------------------
+
 
 @router.get("/{project_id}")
 def get_members(

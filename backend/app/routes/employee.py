@@ -26,6 +26,7 @@ router = APIRouter(
     tags=["Employees"],
 )
 
+
 # ----------------------------------
 # Create Employee (Admin Only)
 # ----------------------------------
@@ -54,12 +55,12 @@ def create(
 
 @router.get(
     "",
-    response_model=list[EmployeeResponse | TeamMemberEmployeeResponse],
+    response_model=None,
 )
 def get_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[EmployeeResponse] | list[TeamMemberEmployeeResponse]:
     employees = get_all_employees(
         db,
         current_user,
@@ -74,7 +75,7 @@ def get_all(
             for employee in employees
         ]
 
-    return employees
+    return [EmployeeResponse.model_validate(employee) for employee in employees]
 
 
 # ----------------------------------
@@ -107,13 +108,13 @@ def get_assignable(
 
 @router.get(
     "/{employee_id}",
-    response_model=EmployeeResponse | TeamMemberEmployeeResponse,
+    response_model=None,
 )
 def get(
     employee_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> EmployeeResponse | TeamMemberEmployeeResponse:
     employee = get_employee_for_user(
         db,
         employee_id,
@@ -132,7 +133,7 @@ def get(
             name=employee.name,
         )
 
-    return employee
+    return EmployeeResponse.model_validate(employee)
 
 
 # ----------------------------------
