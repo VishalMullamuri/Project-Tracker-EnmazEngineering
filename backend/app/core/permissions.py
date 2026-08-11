@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import CompoundSelect, Select
 
 from app.core.security import get_current_user
 from app.database.database import get_db
@@ -106,7 +106,7 @@ def require_team_member(
 def visible_employee_ids(
     db: Session,
     current_user: User,
-) -> Select:
+) -> Select | CompoundSelect:
     if current_user.role == UserRole.ADMIN:
         return select(Employee.id).filter(
             Employee.is_active.is_(True),

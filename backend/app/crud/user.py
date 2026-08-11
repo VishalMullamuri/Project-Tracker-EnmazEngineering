@@ -28,14 +28,12 @@ def deactivate_user(
         return user
 
     if user.role == UserRole.ADMIN:
-        remaining = (
-            db.query(User)
-            .filter(
-                User.role == UserRole.ADMIN,
-                User.is_active.is_(True),
-                User.id != user_id,
-            )
-            .count()
+        admins = (
+            db.query(User).filter(User.role == UserRole.ADMIN).with_for_update().all()
+        )
+
+        remaining = sum(
+            1 for admin in admins if admin.id != user_id and admin.is_active
         )
 
         if remaining == 0:
@@ -46,6 +44,7 @@ def deactivate_user(
 
     user.is_active = False
     user.token_version += 1
+
     employee = db.query(Employee).filter(Employee.user_id == user.id).first()
 
     if employee:
@@ -73,15 +72,13 @@ def activate_user(
         return user
 
     user.is_active = True
+
     employee = db.query(Employee).filter(Employee.user_id == user.id).first()
 
     if employee:
         employee.is_active = True
+
     user.token_version += 1
-    employee = db.query(Employee).filter(Employee.user_id == user.id).first()
-
-    if employee:
-        employee.is_active = True
 
     db.commit()
     db.refresh(user)

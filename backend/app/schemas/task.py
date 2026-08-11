@@ -85,7 +85,7 @@ class TaskResponse(BaseModel):
     project_name: str
     assigned_to: int
     title: str
-    description: str
+    description: str | None = None
     status: str
     priority: str
     remarks: str | None = None
