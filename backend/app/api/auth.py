@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -28,6 +30,9 @@ router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
+
+logger = logging.getLogger(__name__)
+
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
@@ -51,7 +56,6 @@ def register_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-
     existing_user = db.query(User).filter(User.email == user.email).first()
 
     if existing_user:
@@ -88,13 +92,17 @@ def login_user(
     user: UserLogin,
     db: Session = Depends(get_db),
 ):
-
     db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user:
         verify_password(
             user.password,
             DUMMY_PASSWORD_HASH,
+        )
+
+        logger.warning(
+            "Login failed: reason=invalid_credentials email=%s",
+            user.email,
         )
 
         raise HTTPException(
@@ -106,12 +114,22 @@ def login_user(
         user.password,
         db_user.password,
     ):
+        logger.warning(
+            "Login failed: reason=invalid_credentials target_user_id=%s",
+            db_user.id,
+        )
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
         )
 
     if not db_user.is_active:
+        logger.warning(
+            "Login failed: reason=inactive_user target_user_id=%s",
+            db_user.id,
+        )
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
@@ -200,7 +218,6 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-
     if not verify_password(
         data.current_password,
         current_user.password,
@@ -216,6 +233,11 @@ def change_password(
     current_user.token_version += 1
 
     db.commit()
+
+    logger.warning(
+        "Password changed: actor_user_id=%s",
+        current_user.id,
+    )
 
     access_token = create_access_token(
         data={

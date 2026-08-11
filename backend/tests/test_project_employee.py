@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 
 def test_manager_can_assign_admin_created_employee(
@@ -37,13 +38,17 @@ def test_manager_can_assign_admin_created_employee(
 
     project_id = project_response.json()["id"]
 
-    assign_response = client.post(
-        "/project-employees",
-        headers=manager_headers,
-        json={
-            "project_id": project_id,
-            "employee_id": employee_id,
-        },
-    )
+    with patch("app.api.project_employee.logger.warning") as mock_warning:
+        assign_response = client.post(
+            "/project-employees",
+            headers=manager_headers,
+            json={
+                "project_id": project_id,
+                "employee_id": employee_id,
+            },
+        )
 
     assert assign_response.status_code == 200
+
+    mock_warning.assert_called_once()
+    assert "Project employee assigned:" in mock_warning.call_args.args[0]

@@ -91,7 +91,7 @@ def assign(
         data.employee_id,
     )
 
-    logger.info(
+    logger.warning(
         "Project employee assigned: actor_user_id=%s "
         "target_employee_id=%s project_id=%s",
         current_user.id,
@@ -132,7 +132,7 @@ def remove(
         data.employee_id,
     )
 
-    logger.info(
+    logger.warning(
         "Project employee removed: actor_user_id=%s "
         "target_employee_id=%s project_id=%s",
         current_user.id,

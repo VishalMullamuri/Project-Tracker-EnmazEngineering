@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -26,9 +28,13 @@ router = APIRouter(
     tags=["Employees"],
 )
 
+logger = logging.getLogger(__name__)
+
 
 # ----------------------------------
+
 # Create Employee (Admin Only)
+
 # ----------------------------------
 
 
@@ -41,21 +47,32 @@ def create(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return create_employee(
+    result = create_employee(
         db,
         employee,
         current_user,
     )
 
+    logger.warning(
+        "Employee created: actor_user_id=%s target_employee_id=%s",
+        current_user.id,
+        result.id,
+    )
+
+    return result
+
 
 # ----------------------------------
+
 # Get All Employees
+
 # ----------------------------------
 
 
 @router.get(
     "",
     response_model=None,
+    responses={200: {"model": list[EmployeeResponse]}},
 )
 def get_all(
     db: Session = Depends(get_db),
@@ -65,6 +82,13 @@ def get_all(
         db,
         current_user,
     )
+
+    if current_user.role == UserRole.MANAGER:
+        logger.warning(
+            "Employees viewed: actor_user_id=%s employee_count=%s",
+            current_user.id,
+            len(employees),
+        )
 
     if current_user.role == UserRole.TEAM_MEMBER:
         return [
@@ -79,7 +103,9 @@ def get_all(
 
 
 # ----------------------------------
+
 # Get Assignable Employees
+
 # ----------------------------------
 
 
@@ -102,13 +128,16 @@ def get_assignable(
 
 
 # ----------------------------------
+
 # Get Single Employee
+
 # ----------------------------------
 
 
 @router.get(
     "/{employee_id}",
     response_model=None,
+    responses={200: {"model": EmployeeResponse}},
 )
 def get(
     employee_id: int,
@@ -137,7 +166,9 @@ def get(
 
 
 # ----------------------------------
+
 # Update Employee
+
 # ----------------------------------
 
 
@@ -164,11 +195,19 @@ def update(
             detail="Employee not found",
         )
 
+    logger.warning(
+        "Employee updated: actor_user_id=%s target_employee_id=%s",
+        current_user.id,
+        employee_id,
+    )
+
     return updated
 
 
 # ----------------------------------
+
 # Delete Employee (Admin Only)
+
 # ----------------------------------
 
 
@@ -191,6 +230,12 @@ def delete(
             status_code=404,
             detail="Employee not found",
         )
+
+    logger.warning(
+        "Employee deleted: actor_user_id=%s target_employee_id=%s",
+        current_user.id,
+        employee_id,
+    )
 
     return {
         "message": "Employee deleted successfully",
