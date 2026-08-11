@@ -291,14 +291,35 @@ def test_manager_partial_update(
 def test_team_member_cannot_update_others_task(
     client,
     manager_headers,
-    manager_user,
     employee_headers,
     employee_user,
     db,
 ):
     from app.core.security import hash_password
     from app.models.employee import Employee
+    from app.models.project_employee import ProjectEmployee
     from app.models.user import User, UserRole
+
+    project = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Shared Project",
+            "description": "Testing",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
+    )
+
+    assert project.status_code == 200
+    project_id = project.json()["id"]
+
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=employee_user.id,
+        )
+    )
 
     other_user = User(
         name="Other Employee",
@@ -317,24 +338,40 @@ def test_team_member_cannot_update_others_task(
         email=other_user.email,
         phone="9999999999",
         user_id=other_user.id,
-        created_by=manager_user.id,
+        created_by=employee_user.user_id,
         is_active=True,
     )
 
     db.add(other_employee)
-    db.commit()
-    db.refresh(other_user)
-    db.refresh(other_employee)
+    db.flush()
 
-    task = create_task(
-        client,
-        manager_headers,
-        other_employee,
-        db,
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=other_employee.id,
+        )
     )
 
+    db.commit()
+
+    task = client.post(
+        "/tasks",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "assigned_to": other_user.id,
+            "title": "Other Employee Task",
+            "description": "Testing Task",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert task.status_code == 200
+
     response = client.put(
-        f"/tasks/{task['id']}",
+        f"/tasks/{task.json()['id']}",
         headers=employee_headers,
         json={
             "status": "Completed",

@@ -46,4 +46,4 @@ def test_manager_can_assign_admin_created_employee(
         },
     )
 
-    assert assign_response.status_code == 404
+    assert assign_response.status_code == 200

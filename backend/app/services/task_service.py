@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.models.employee import Employee
 from app.models.project import Project
@@ -123,20 +123,21 @@ def get_all_tasks(
         query = query.filter(Project.created_by == current_user.id)
 
     else:
+        member_employee = aliased(Employee)
+
         query = (
-            query
-            .join(
+            query.join(
                 ProjectEmployee,
-                ProjectEmployee.project_id == Task.project_id,
+                ProjectEmployee.project_id == Project.id,
             )
             .join(
-                Employee,
-                Employee.id == ProjectEmployee.employee_id,
+                member_employee,
+                member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Employee.user_id == current_user.id,
-                Employee.is_active.is_(True),
-                User.is_active.is_(True),
+                Task.assigned_to == current_user.id,
+                member_employee.user_id == current_user.id,
+                member_employee.is_active.is_(True),
             )
         )
 
@@ -181,20 +182,21 @@ def get_task(
         query = query.filter(Project.created_by == current_user.id)
 
     else:
+        member_employee = aliased(Employee)
+
         query = (
-            query
-            .join(
+            query.join(
                 ProjectEmployee,
-                ProjectEmployee.project_id == Task.project_id,
+                ProjectEmployee.project_id == Project.id,
             )
             .join(
-                Employee,
-                Employee.id == ProjectEmployee.employee_id,
+                member_employee,
+                member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Employee.user_id == current_user.id,
-                Employee.is_active.is_(True),
-                User.is_active.is_(True),
+                Task.assigned_to == current_user.id,
+                member_employee.user_id == current_user.id,
+                member_employee.is_active.is_(True),
             )
         )
 
@@ -230,20 +232,21 @@ def update_task(
     )
 
     if role == "TEAM_MEMBER":
+        member_employee = aliased(Employee)
+
         query = (
-            query
-            .join(
+            query.join(
                 ProjectEmployee,
-                ProjectEmployee.project_id == Task.project_id,
+                ProjectEmployee.project_id == Project.id,
             )
             .join(
-                Employee,
-                Employee.id == ProjectEmployee.employee_id,
+                member_employee,
+                member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Employee.user_id == current_user.id,
-                Employee.is_active.is_(True),
-                User.is_active.is_(True),
+                Task.assigned_to == current_user.id,
+                member_employee.user_id == current_user.id,
+                member_employee.is_active.is_(True),
             )
         )
 

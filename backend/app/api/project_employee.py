@@ -30,6 +30,7 @@ router = APIRouter(
 # Assign Employee to Project
 # ----------------------------------
 
+
 @router.post("")
 def assign(
     data: ProjectEmployeeCreate,
@@ -54,15 +55,24 @@ def assign(
         .filter(
             Employee.id == data.employee_id,
             Employee.is_active.is_(True),
-            Employee.id.in_(
-                visible_employee_ids(
-                    db,
-                    current_user,
-                )
-            ),
         )
         .first()
     )
+    user = (
+        db.query(User)
+        .filter(
+            User.id == employee.user_id,
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found",
+        )
 
     if not employee:
         raise HTTPException(
@@ -97,6 +107,7 @@ def assign(
 # Remove Employee from Project
 # ----------------------------------
 
+
 @router.delete("")
 def remove(
     data: ProjectEmployeeCreate,
@@ -129,6 +140,7 @@ def remove(
 # Get All Assignments
 # ----------------------------------
 
+
 @router.get("/all")
 def get_all_assignments(
     db: Session = Depends(get_db),
@@ -148,6 +160,7 @@ def get_all_assignments(
 # ----------------------------------
 # Get Members of a Project
 # ----------------------------------
+
 
 @router.get("/{project_id}")
 def get_members(
@@ -178,4 +191,4 @@ def get_members(
             if assignment.employee_id in visible_ids
         ]
 
-    return assignments  
+    return assignments

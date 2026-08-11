@@ -54,7 +54,7 @@ def create(
 
 @router.get(
     "",
-    response_model=list[EmployeeResponse],
+    response_model=None,
 )
 def get_all(
     db: Session = Depends(get_db),
@@ -107,7 +107,7 @@ def get_assignable(
 
 @router.get(
     "/{employee_id}",
-    response_model=EmployeeResponse,
+    response_model=None,
 )
 def get(
     employee_id: int,

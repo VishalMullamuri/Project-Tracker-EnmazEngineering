@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.models.employee import Employee
-from app.models.project_employee import ProjectEmployee
+
 from app.core.permissions import require_manager
 from app.core.security import get_current_user
 from app.database.database import get_db
+from app.models.employee import Employee
+from app.models.project_employee import ProjectEmployee
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.task import (
