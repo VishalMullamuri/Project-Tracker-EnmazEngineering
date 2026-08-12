@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,8 @@ router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("")
@@ -47,6 +51,13 @@ def get_users(
                 User.is_active.is_(True),
             )
             .all()
+        )
+
+    if current_user.role == UserRole.MANAGER:
+        logger.info(
+            "Users viewed: actor_user_id=%s user_count=%s",
+            current_user.id,
+            len(users),
         )
 
     return [

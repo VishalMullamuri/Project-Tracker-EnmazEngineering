@@ -32,9 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 # ----------------------------------
-
 # Create Employee (Admin Only)
-
 # ----------------------------------
 
 
@@ -53,7 +51,7 @@ def create(
         current_user,
     )
 
-    logger.warning(
+    logger.info(
         "Employee created: actor_user_id=%s target_employee_id=%s",
         current_user.id,
         result.id,
@@ -63,9 +61,7 @@ def create(
 
 
 # ----------------------------------
-
 # Get All Employees
-
 # ----------------------------------
 
 
@@ -84,7 +80,7 @@ def get_all(
     )
 
     if current_user.role == UserRole.MANAGER:
-        logger.warning(
+        logger.info(
             "Employees viewed: actor_user_id=%s employee_count=%s",
             current_user.id,
             len(employees),
@@ -103,9 +99,7 @@ def get_all(
 
 
 # ----------------------------------
-
 # Get Assignable Employees
-
 # ----------------------------------
 
 
@@ -128,9 +122,7 @@ def get_assignable(
 
 
 # ----------------------------------
-
 # Get Single Employee
-
 # ----------------------------------
 
 
@@ -166,9 +158,7 @@ def get(
 
 
 # ----------------------------------
-
 # Update Employee
-
 # ----------------------------------
 
 
@@ -195,7 +185,7 @@ def update(
             detail="Employee not found",
         )
 
-    logger.warning(
+    logger.info(
         "Employee updated: actor_user_id=%s target_employee_id=%s",
         current_user.id,
         employee_id,
@@ -205,9 +195,7 @@ def update(
 
 
 # ----------------------------------
-
 # Delete Employee (Admin Only)
-
 # ----------------------------------
 
 
@@ -231,7 +219,7 @@ def delete(
             detail="Employee not found",
         )
 
-    logger.warning(
+    logger.info(
         "Employee deleted: actor_user_id=%s target_employee_id=%s",
         current_user.id,
         employee_id,

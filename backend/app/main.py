@@ -16,11 +16,14 @@ from app.api.project import router as project_router
 from app.api.project_employee import router as project_employee_router
 from app.api.task import router as task_router
 from app.core.rate_limit import limiter
+from app.core.logging_config import configure_logging
 from app.database.database import SessionLocal
 from app.routes.employee import router as employee_router
 from app.routes.users import router as users_router
 
 ENV = os.getenv("ENV", "production")
+
+configure_logging()
 
 # -----------------------------------
 # FastAPI App

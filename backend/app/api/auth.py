@@ -234,7 +234,7 @@ def change_password(
 
     db.commit()
 
-    logger.warning(
+    logger.info(
         "Password changed: actor_user_id=%s",
         current_user.id,
     )
