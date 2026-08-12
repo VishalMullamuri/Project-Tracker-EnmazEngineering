@@ -38,7 +38,7 @@ def test_manager_can_assign_admin_created_employee(
 
     project_id = project_response.json()["id"]
 
-    with patch("app.api.project_employee.logger.warning") as mock_warning:
+    with patch("app.api.project_employee.logger.info") as mock_info:
         assign_response = client.post(
             "/project-employees",
             headers=manager_headers,
@@ -50,5 +50,5 @@ def test_manager_can_assign_admin_created_employee(
 
     assert assign_response.status_code == 200
 
-    mock_warning.assert_called_once()
-    assert "Project employee assigned:" in mock_warning.call_args.args[0]
+    mock_info.assert_called_once()
+    assert "Project employee assigned:" in mock_info.call_args.args[0]
