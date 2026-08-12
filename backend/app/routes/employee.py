@@ -95,7 +95,17 @@ def get_all(
             for employee in employees
         ]
 
-    return [EmployeeResponse.model_validate(employee) for employee in employees]
+    return [
+    EmployeeResponse(
+        id=employee.id,
+        user_id=employee.user_id,
+        name=employee.name,
+        email=employee.email,
+        phone=employee.phone,
+        role=employee.user.role,
+    )
+    for employee in employees
+]
 
 
 # ----------------------------------

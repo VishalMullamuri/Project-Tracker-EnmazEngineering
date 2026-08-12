@@ -36,6 +36,7 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     first_login: bool
+    phone: str | None = None
 
     class Config:
         from_attributes = True

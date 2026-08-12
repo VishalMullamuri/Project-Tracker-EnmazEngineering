@@ -12,6 +12,7 @@ type Employee = {
   name: string;
   email: string;
   phone: string;
+  role: "ADMIN" | "MANAGER" | "TEAM_MEMBER";
   projects?: number;
 };
 
@@ -219,6 +220,10 @@ const EmployeeTable = ({
               </th>
 
               <th className="py-3 text-center w-44 font-semibold">
+                Role
+              </th>
+
+              <th className="py-3 text-center w-44 font-semibold">
                 Phone
               </th>
 
@@ -254,6 +259,20 @@ const EmployeeTable = ({
 
                   <td className="py-3 text-gray-700">
                     {employee.email}
+                  </td>
+
+                  <td className="py-3 text-center">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        employee.role === "MANAGER"
+                          ? "bg-purple-100 text-purple-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {employee.role === "MANAGER"
+                        ? "Manager"
+                        : "Team Member"}
+                    </span>
                   </td>
 
                   <td className="py-3 text-center text-gray-700">

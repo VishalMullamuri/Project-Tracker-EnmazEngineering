@@ -8,6 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.user import User, UserRole
 
 
 class Employee(Base):
@@ -59,3 +60,7 @@ class Employee(Base):
         "User",
         foreign_keys=[user_id],
     )
+
+    @property
+    def role(self) -> UserRole:
+        return self.user.role

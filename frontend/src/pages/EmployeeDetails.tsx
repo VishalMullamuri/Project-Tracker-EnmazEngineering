@@ -24,12 +24,13 @@ type Employee = {
   name: string;
   email: string;
   phone: string;
+  role: "ADMIN" | "MANAGER" | "TEAM_MEMBER";
 };
-
 type Project = {
   id: number;
   project_name: string;
   status: string;
+  created_by: number;
 };
 
 type Task = {
@@ -120,46 +121,52 @@ const EmployeeDetails = () => {
       const token =
         localStorage.getItem("token");
 
-      const assignments =
-        await api.get(
-          "/project-employees/all",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-      const employeeProjects =
-        assignments.data
-          .filter(
-            (item: any) =>
-              item.employee_id ===
-              employee.id
-          )
-          .map(
-            (item: any) =>
-              item.project_id
-          );
-
       const projectResponse =
-        await api.get(
-          "/projects",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+  await api.get(
+    "/projects",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
-      setProjects(
-        projectResponse.data.filter(
-          (project: Project) =>
-            employeeProjects.includes(
-              project.id
-            )
-        )
+if (employee.role === "MANAGER") {
+  setProjects(
+    projectResponse.data.filter(
+      (project: Project) =>
+        project.created_by === employee.user_id
+    )
+  );
+} else {
+  const assignments =
+    await api.get(
+      "/project-employees/all",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+  const employeeProjects =
+    assignments.data
+      .filter(
+        (item: any) =>
+          item.employee_id === employee.id
+      )
+      .map(
+        (item: any) =>
+          item.project_id
       );
+
+  setProjects(
+    projectResponse.data.filter(
+      (project: Project) =>
+        employeeProjects.includes(project.id)
+    )
+  );
+}
 
       const taskResponse =
         await api.get(
@@ -415,6 +422,22 @@ const EmployeeDetails = () => {
 
                 <span className="text-gray-700">
                   {employee.email}
+                </span>
+
+              </div>
+
+              <div className="flex items-center gap-3">
+
+                <span className="text-blue-600 font-semibold w-[18px]">
+                  👤
+                </span>
+
+                <span className="text-gray-700">
+                  {employee.role === "MANAGER"
+                    ? "Manager"
+                    : employee.role === "TEAM_MEMBER"
+                      ? "Team Member"
+                      : "Admin"}
                 </span>
 
               </div>
