@@ -2,11 +2,12 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.core.permissions import visible_employee_ids
 from app.core.security import hash_password
 from app.crud.user import deactivate_user
 from app.models.employee import Employee
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.employee import (
     EmployeeCreate,
     EmployeeUpdate,

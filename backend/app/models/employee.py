@@ -7,8 +7,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
+from app.core.enums import UserRole
 from app.database import Base
-from app.models.user import User, UserRole
 
 
 class Employee(Base):
@@ -62,5 +62,5 @@ class Employee(Base):
     )
 
     @property
-    def role(self) -> UserRole:
-        return self.user.role
+    def role(self) -> UserRole | None:
+        return self.user.role if self.user else None    

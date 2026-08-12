@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.core.permissions import require_admin, require_manager
 from app.core.security import get_current_user
 from app.crud.employee import (
@@ -14,7 +15,7 @@ from app.crud.employee import (
     update_employee,
 )
 from app.database.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.employee import (
     AssignableEmployeeResponse,
     EmployeeCreate,

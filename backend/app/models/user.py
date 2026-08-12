@@ -1,5 +1,3 @@
-from enum import Enum
-
 from sqlalchemy import (
     Boolean,
     Column,
@@ -12,13 +10,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
+from app.core.enums import UserRole
 from app.database.database import Base
-
-
-class UserRole(str, Enum):
-    ADMIN = "ADMIN"
-    MANAGER = "MANAGER"
-    TEAM_MEMBER = "TEAM_MEMBER"
 
 
 class User(Base):

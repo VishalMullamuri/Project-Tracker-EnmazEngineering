@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from app.models.employee import Employee
+
 from app.core.permissions import (
     require_admin,
     require_manager,
@@ -17,6 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.database.database import get_db
+from app.models.employee import Employee
 from app.models.user import User
 from app.schemas.user import (
     ChangePassword,

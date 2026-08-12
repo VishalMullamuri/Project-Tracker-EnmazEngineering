@@ -23,12 +23,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.enums import UserRole
 from app.core.rate_limit import limiter
 from app.core.security import hash_password
 from app.database.database import get_db
 from app.main import app
 from app.models.employee import Employee
-from app.models.user import User, UserRole
+from app.models.user import User
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 
