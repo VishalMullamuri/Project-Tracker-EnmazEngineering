@@ -26,54 +26,31 @@ def create_employee(
         .first()
     )
 
-    try:
-        if existing_user:
-            if existing_user.is_active:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email already exists.",
-                )
+    if existing_user and existing_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists.",
+        )
 
+    try:
+        if existing_user and not existing_user.is_active:
             existing_employee = (
                 db.query(Employee)
                 .filter(
-                    Employee.email == employee.email,
                     Employee.user_id == existing_user.id,
+                    Employee.is_active.is_(False),
                 )
                 .first()
             )
 
-            existing_user.name = employee.name
-            existing_user.password = hash_password(employee.password)
-            existing_user.role = employee.role
-            existing_user.is_active = True
-            existing_user.first_login = True
-
-            if existing_employee:
-                existing_employee.name = employee.name
-                existing_employee.phone = employee.phone
-                existing_employee.is_active = True
-                existing_employee.created_by = current_user.id
-
-                db.commit()
-                db.refresh(existing_employee)
-
-                return existing_employee
-
-            db_employee = Employee(
-                name=employee.name,
-                email=employee.email,
-                phone=employee.phone,
-                user_id=existing_user.id,
-                created_by=current_user.id,
-                is_active=True,
+            tombstone_email = (
+                f"deleted-{existing_user.id}-{existing_user.email}"
             )
 
-            db.add(db_employee)
-            db.commit()
-            db.refresh(db_employee)
+            existing_user.email = tombstone_email
 
-            return db_employee
+            if existing_employee:
+                existing_employee.email = tombstone_email
 
         db_user = User(
             name=employee.name,

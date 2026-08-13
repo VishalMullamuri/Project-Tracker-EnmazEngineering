@@ -53,9 +53,16 @@ def create(
     )
 
     logger.info(
-        "Employee created: actor_user_id=%s target_employee_id=%s",
+    "Employee created: actor_user_id=%s target_employee_id=%s",
+    current_user.id,
+    result.id,
+)
+
+    logger.info(
+        "Employee account created: actor_user_id=%s target_user_id=%s email=%s",
         current_user.id,
-        result.id,
+        result.user_id,
+        result.email,
     )
 
     return result
