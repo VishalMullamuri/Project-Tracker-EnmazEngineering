@@ -108,7 +108,6 @@
   const createProject = async (project: {
     project_name: string;
     description: string;
-    status: string;
     start_date: string;
     end_date: string;
   }) => {
