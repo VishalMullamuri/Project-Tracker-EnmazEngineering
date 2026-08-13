@@ -1,7 +1,9 @@
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
   LogOut,
+  UserCircle,
 } from "lucide-react";
 import {
   useNavigate,
@@ -15,6 +17,8 @@ type LayoutProps = {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [showProfile, setShowProfile] = useState(false);
 
   const user = JSON.parse(
     localStorage.getItem("user") || "{}"
@@ -32,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
     if (!confirmLogout) return;
 
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 
@@ -41,6 +46,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       <header className="bg-white border-b border-slate-200">
         <div className="flex justify-between items-start px-10 py-7">
+
           {/* Left Section */}
 
           <div className="flex flex-col items-start gap-5">
@@ -79,13 +85,80 @@ const Layout = ({ children }: LayoutProps) => {
 
           {/* Right Section */}
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-2 w-44 h-12 rounded-xl border border-slate-300 bg-white text-slate-700 text-base font-semibold hover:bg-slate-100 transition-all duration-200"
-          >
-            Logout
-            <LogOut size={18} />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() =>
+                setShowProfile(!showProfile)
+              }
+              className="flex items-center justify-center gap-2 w-44 h-12 rounded-xl border border-slate-300 bg-white text-slate-700 text-base font-semibold hover:bg-slate-100 transition-all duration-200"
+            >
+              <UserCircle size={20} />
+              Profile
+            </button>
+
+            {showProfile && (
+              <div className="absolute right-0 top-14 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-5">
+
+                <div className="border-b border-slate-200 pb-4 mb-4">
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Profile
+                  </h2>
+                </div>
+
+                <div className="space-y-4">
+
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">
+                      Name
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {user.name || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">
+                      Role
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {user.role || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">
+                      Email
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800 break-all">
+                      {user.email || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">
+                      Phone Number
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {user.phone || "-"}
+                    </p>
+                  </div>
+
+                </div>
+
+                <div className="border-t border-slate-200 mt-5 pt-4">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white py-2.5 font-semibold hover:bg-red-700 transition"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </div>
+
+              </div>
+            )}
+          </div>
+
         </div>
       </header>
 

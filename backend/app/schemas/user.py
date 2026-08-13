@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models.user import UserRole
+from app.core.enums import UserRole
 
 
 class UserCreate(BaseModel):
@@ -36,6 +36,7 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     first_login: bool
+    phone: str | None = None
 
     class Config:
         from_attributes = True

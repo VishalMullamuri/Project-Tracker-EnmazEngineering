@@ -17,6 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.database.database import get_db
+from app.models.employee import Employee
 from app.models.user import User
 from app.schemas.user import (
     ChangePassword,
@@ -160,8 +161,26 @@ def login_user(
 )
 def get_logged_in_user(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    return current_user
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.user_id == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "is_active": current_user.is_active,
+        "first_login": current_user.first_login,
+        "phone": employee.phone if employee else None,
+    }
 
 
 # -----------------------------------

@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.core.permissions import (
     require_manager,
     require_manager_or_project_member,
@@ -17,7 +18,7 @@ from app.database.database import get_db
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.project_employee import ProjectEmployee
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.project_employee import (
     ProjectEmployeeCreate,
 )

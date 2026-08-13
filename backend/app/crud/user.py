@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.models.employee import Employee
-from app.models.user import User, UserRole
+from app.models.user import User
 
 
 def deactivate_user(

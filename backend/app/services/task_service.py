@@ -1,11 +1,12 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, aliased
 
+from app.core.enums import UserRole
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.project_employee import ProjectEmployee
 from app.models.task import Task
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.task import (
     TaskCreate,
     TaskUpdate,

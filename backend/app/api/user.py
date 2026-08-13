@@ -3,13 +3,14 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.core.permissions import (
     require_manager,
     visible_employee_ids,
 )
 from app.database.database import get_db
 from app.models.employee import Employee
-from app.models.user import User, UserRole
+from app.models.user import User
 
 router = APIRouter(
     prefix="/users",

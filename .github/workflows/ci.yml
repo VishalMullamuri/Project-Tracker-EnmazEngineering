@@ -2,11 +2,14 @@ name: CI
 
 on:
   push:
-    branches:
-      - review-fixes
+    branches-ignore:
+      - develop
+      - main
+
   pull_request:
     branches:
-      - review-fixes
+      - develop
+      - main
 
 jobs:
   test:

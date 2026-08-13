@@ -295,10 +295,11 @@ def test_team_member_cannot_update_others_task(
     employee_user,
     db,
 ):
+    from app.core.enums import UserRole
     from app.core.security import hash_password
     from app.models.employee import Employee
     from app.models.project_employee import ProjectEmployee
-    from app.models.user import User, UserRole
+    from app.models.user import User
 
     project = client.post(
         "/projects",

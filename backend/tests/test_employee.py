@@ -58,4 +58,5 @@ def test_admin_employee_response_contains_full_fields(
             "name",
             "email",
             "phone",
+            "role",
         }

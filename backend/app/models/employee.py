@@ -7,6 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
+from app.core.enums import UserRole
 from app.database import Base
 
 
@@ -59,3 +60,7 @@ class Employee(Base):
         "User",
         foreign_keys=[user_id],
     )
+
+    @property
+    def role(self) -> UserRole | None:
+        return self.user.role if self.user else None    

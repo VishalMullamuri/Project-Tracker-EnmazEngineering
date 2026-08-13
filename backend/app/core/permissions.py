@@ -3,12 +3,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import CompoundSelect, Select
 
+from app.core.enums import UserRole
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.project_employee import ProjectEmployee
-from app.models.user import User, UserRole
+from app.models.user import User
 
 
 def require_admin(
