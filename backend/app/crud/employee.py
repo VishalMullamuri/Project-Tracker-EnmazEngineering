@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -14,17 +16,15 @@ from app.schemas.employee import (
     TeamMemberEmployeeResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def create_employee(
     db: Session,
     employee: EmployeeCreate,
     current_user: User,
 ):
-    existing_user = (
-        db.query(User)
-        .filter(User.email == employee.email)
-        .first()
-    )
+    existing_user = db.query(User).filter(User.email == employee.email).first()
 
     if existing_user and existing_user.is_active:
         raise HTTPException(
@@ -43,11 +43,15 @@ def create_employee(
                 .first()
             )
 
-            tombstone_email = (
-                f"deleted-{existing_user.id}-{existing_user.email}"
-            )
+            tombstone_email = f"deleted-{existing_user.id}@invalid"
 
             existing_user.email = tombstone_email
+
+            logger.info(
+                "Employee account tombstoned: actor_user_id=%s target_user_id=%s",
+                current_user.id,
+                existing_user.id,
+            )
 
             if existing_employee:
                 existing_employee.email = tombstone_email

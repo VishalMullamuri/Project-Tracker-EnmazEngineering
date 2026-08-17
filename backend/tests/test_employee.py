@@ -61,6 +61,7 @@ def test_admin_employee_response_contains_full_fields(
             "role",
         }
 
+
 def test_recreating_deleted_employee_creates_new_account(
     client,
     admin_headers,
@@ -99,3 +100,33 @@ def test_recreating_deleted_employee_creates_new_account(
     assert data["email"] == email
     assert data["phone"] == "9876543210"
     assert data["role"] == "TEAM_MEMBER"
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": email,
+            "password": "temporary-password-123",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    new_employee_headers = {
+        "Authorization": (f"Bearer {login_response.json()['access_token']}")
+    }
+
+    tasks_response = client.get(
+        "/tasks",
+        headers=new_employee_headers,
+    )
+
+    assert tasks_response.status_code == 200
+    assert tasks_response.json() == []
+
+    projects_response = client.get(
+        "/projects",
+        headers=new_employee_headers,
+    )
+
+    assert projects_response.status_code == 200
+    assert projects_response.json() == []
