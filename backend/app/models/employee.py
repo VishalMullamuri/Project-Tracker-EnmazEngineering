@@ -63,4 +63,4 @@ class Employee(Base):
 
     @property
     def role(self) -> UserRole | None:
-        return self.user.role if self.user else None    
+        return self.user.role if self.user else None

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -14,34 +16,53 @@ from app.schemas.employee import (
     TeamMemberEmployeeResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def create_employee(
     db: Session,
     employee: EmployeeCreate,
     current_user: User,
 ):
-    existing_user = (
-        db.query(User)
-        .filter(
-            User.email == employee.email,
-            User.is_active.is_(True),
-        )
-        .first()
-    )
+    existing_user = db.query(User).filter(User.email == employee.email).first()
 
-    if existing_user:
+    if existing_user and existing_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already exists.",
         )
 
     try:
+        if existing_user and not existing_user.is_active:
+            existing_employee = (
+                db.query(Employee)
+                .filter(
+                    Employee.user_id == existing_user.id,
+                    Employee.is_active.is_(False),
+                )
+                .first()
+            )
+
+            tombstone_email = f"deleted-{existing_user.id}@invalid"
+
+            existing_user.email = tombstone_email
+
+            logger.info(
+                "Employee account tombstoned: actor_user_id=%s target_user_id=%s",
+                current_user.id,
+                existing_user.id,
+            )
+
+            if existing_employee:
+                existing_employee.email = tombstone_email
+
         db_user = User(
             name=employee.name,
             email=employee.email,
             password=hash_password(employee.password),
             role=employee.role,
             is_active=True,
+            first_login=True,
         )
 
         db.add(db_user)

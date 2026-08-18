@@ -29,7 +29,7 @@ class EmployeeResponse(BaseModel):
     name: str
     email: EmailStr
     phone: str
-    role: UserRole | None = None    
+    role: UserRole | None = None
 
     class Config:
         from_attributes = True

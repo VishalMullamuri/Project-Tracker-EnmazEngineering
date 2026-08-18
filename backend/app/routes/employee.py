@@ -53,9 +53,10 @@ def create(
     )
 
     logger.info(
-        "Employee created: actor_user_id=%s target_employee_id=%s",
+        "Employee created: actor_user_id=%s target_employee_id=%s target_user_id=%s",
         current_user.id,
         result.id,
+        result.user_id,
     )
 
     return result
@@ -96,10 +97,7 @@ def get_all(
             for employee in employees
         ]
 
-    return [
-        EmployeeResponse.model_validate(employee)
-        for employee in employees
-    ]
+    return [EmployeeResponse.model_validate(employee) for employee in employees]
 
 
 # ----------------------------------
