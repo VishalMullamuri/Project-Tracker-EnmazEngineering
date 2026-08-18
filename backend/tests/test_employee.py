@@ -77,6 +77,12 @@ def test_recreating_deleted_employee_creates_new_account(
     )
 
     assert delete_response.status_code == 200
+    inactive_users_response = client.get(
+        "/users?include_inactive=true",
+        headers=admin_headers,
+    )
+
+    assert inactive_users_response.status_code == 200
 
     create_response = client.post(
         "/employees",

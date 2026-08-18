@@ -97,6 +97,7 @@ const AddEmployeeModal = ({
               placeholder="Enter temporary password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
               className="w-full border rounded-lg px-4 py-3"
             />
           </div>
