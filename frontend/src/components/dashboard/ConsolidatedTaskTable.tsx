@@ -339,8 +339,8 @@ window.location.reload();
                 "
               >
 
-                <option value="Pending">
-                  Pending
+                <option value="Not Started">
+                  Not Started
                 </option>
 
                 <option value="In Progress">

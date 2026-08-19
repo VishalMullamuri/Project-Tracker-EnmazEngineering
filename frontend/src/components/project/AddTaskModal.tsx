@@ -10,7 +10,7 @@ export type Task = {
   assigned_to_name?: string;
   title: string;
   description: string;
-  status: "Pending" | "In Progress" | "Completed";
+  status: "Not Started" | "In Progress" | "Completed";
   priority: "Low" | "Medium" | "High";
   remarks: string;
   start_date: string;
@@ -46,10 +46,10 @@ const AddTaskModal = ({
 
   const [status, setStatus] =
     useState<
-      "Pending" |
+      "Not Started" |
       "In Progress" |
       "Completed"
-    >("Pending");
+    >("Not Started");
 
   const [priority, setPriority] =
     useState<
@@ -85,7 +85,7 @@ const AddTaskModal = ({
       setTitle("");
       setDescription("");
       setAssignedTo(0);
-      setStatus("Pending");
+      setStatus("Not Started");
       setPriority("Medium");
       setRemarks("");
       setStartDate("");
@@ -299,7 +299,7 @@ const AddTaskModal = ({
                 onChange={(e) =>
                   setStatus(
                     e.target.value as
-                      | "Pending"
+                      | "Not Started"
                       | "In Progress"
                       | "Completed"
                   )
@@ -307,8 +307,8 @@ const AddTaskModal = ({
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
 
-                <option value="Pending">
-                  Pending
+                <option value="Not Started">
+                  Not Started
                 </option>
 
                 <option value="In Progress">

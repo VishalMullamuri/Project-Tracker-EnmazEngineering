@@ -67,7 +67,7 @@ def test_create_task(
     )
 
     assert task["title"] == "Task 1"
-    assert task["status"] == "Pending"
+    assert task["status"] == "Not Started"
 
 
 def test_get_all_tasks(

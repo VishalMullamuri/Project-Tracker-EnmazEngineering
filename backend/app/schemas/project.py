@@ -4,7 +4,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    computed_field,
     model_validator,
 )
 
@@ -58,6 +57,8 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     project_name: str
     description: str | None = None
@@ -65,20 +66,4 @@ class ProjectResponse(BaseModel):
     start_date: date
     end_date: date
     created_by: int
-
-    @computed_field
-    @property
-    def status(self) -> str:
-        if self.progress == 100:
-            return "Completed"
-
-        if self.end_date < date.today():
-            return "Delayed"
-
-        if self.progress == 0:
-            return "Not Started"
-
-        return "In Progress"
-
-    class Config:
-        from_attributes = True
+    status: str

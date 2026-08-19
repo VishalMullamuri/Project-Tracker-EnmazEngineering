@@ -44,7 +44,7 @@ class Task(Base):
 
     status = Column(
         String(50),
-        default="Pending",
+        default="Not Started",
     )
 
     priority = Column(

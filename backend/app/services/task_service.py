@@ -11,7 +11,10 @@ from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
 )
-from app.services.project_service import calculate_progress
+from app.services.project_service import (
+    calculate_progress,
+    update_project_status,
+)
 
 
 def _resolve_project_member(
@@ -77,7 +80,7 @@ def create_task(
         priority=task.priority,
         start_date=task.start_date,
         due_date=task.due_date,
-        status="Pending",
+        status="Not Started",
         created_by=current_user.id,
     )
 
@@ -85,6 +88,11 @@ def create_task(
     db.flush()
 
     calculate_progress(
+        db,
+        db_task.project_id,
+    )
+
+    update_project_status(
         db,
         db_task.project_id,
     )
@@ -267,16 +275,23 @@ def update_task(
     if role == "TEAM_MEMBER":
         allowed_fields = {"status", "remarks"}
 
-        forbidden_fields = sorted(set(update_data.keys()) - allowed_fields)
+        forbidden_fields = sorted(
+            set(update_data.keys()) - allowed_fields
+        )
 
         if forbidden_fields:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=("Team members cannot modify: " + ", ".join(forbidden_fields)),
+                detail=(
+                    "Team members cannot modify: "
+                    + ", ".join(forbidden_fields)
+                ),
             )
 
         update_data = {
-            key: value for key, value in update_data.items() if key in allowed_fields
+            key: value
+            for key, value in update_data.items()
+            if key in allowed_fields
         }
 
     if "assigned_to" in update_data:
@@ -296,10 +311,19 @@ def update_task(
         db_task.project_id,
     )
 
+    update_project_status(
+        db,
+        db_task.project_id,
+    )
+
     db.commit()
     db.refresh(db_task)
 
-    project = db.query(Project).filter(Project.id == db_task.project_id).first()
+    project = (
+        db.query(Project)
+        .filter(Project.id == db_task.project_id)
+        .first()
+    )
 
     if project:
         db_task.project_name = project.project_name
@@ -333,6 +357,11 @@ def delete_task(
     db.flush()
 
     calculate_progress(
+        db,
+        project_id,
+    )
+
+    update_project_status(
         db,
         project_id,
     )
