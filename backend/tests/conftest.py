@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 import pytest
 from sqlalchemy.engine.url import make_url
@@ -19,6 +20,8 @@ if not url or not make_url(url).database.endswith("_test"):
 
 os.environ["DATABASE_URL"] = url
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -29,6 +32,8 @@ from app.core.security import hash_password
 from app.database.database import get_db
 from app.main import app
 from app.models.employee import Employee
+from app.models.project import Project
+from app.models.project_employee import ProjectEmployee
 from app.models.user import User
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
@@ -41,10 +46,6 @@ TestingSessionLocal = sessionmaker(
     bind=engine,
 )
 
-from alembic.config import Config
-
-from alembic import command
-
 
 @pytest.fixture(scope="session", autouse=True)
 def create_test_database():
@@ -55,7 +56,6 @@ def create_test_database():
 
 @pytest.fixture()
 def db():
-
     connection = engine.connect()
 
     transaction = connection.begin()
@@ -73,7 +73,6 @@ def db():
 
 @pytest.fixture()
 def client(db):
-
     def override_get_db():
         try:
             yield db
@@ -92,7 +91,6 @@ def client(db):
 
 @pytest.fixture()
 def admin_user(db):
-
     admin = User(
         name="Admin",
         email="admin@test.com",
@@ -111,7 +109,6 @@ def admin_user(db):
 
 @pytest.fixture()
 def manager_user(db):
-
     manager = User(
         name="Manager",
         email="manager@test.com",
@@ -130,7 +127,6 @@ def manager_user(db):
 
 @pytest.fixture()
 def employee_user(db, admin_user):
-
     user = User(
         name="Employee",
         email="employee@test.com",
@@ -163,8 +159,45 @@ def employee_user(db, admin_user):
 
 
 @pytest.fixture()
-def admin_token(client, admin_user):
+def project(
+    client,
+    db,
+    manager_headers,
+    employee_user,
+):
+    response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Test Project",
+            "description": "Testing",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
+    )
 
+    assert response.status_code == 200
+
+    project_id = response.json()["id"]
+
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=employee_user.id,
+        )
+    )
+
+    db.commit()
+
+    return (
+        db.query(Project)
+        .filter(Project.id == project_id)
+        .first()
+    )
+
+
+@pytest.fixture()
+def admin_token(client, admin_user):
     response = client.post(
         "/auth/login",
         json={
@@ -178,7 +211,6 @@ def admin_token(client, admin_user):
 
 @pytest.fixture()
 def manager_token(client, manager_user):
-
     response = client.post(
         "/auth/login",
         json={
@@ -192,7 +224,6 @@ def manager_token(client, manager_user):
 
 @pytest.fixture()
 def employee_token(client, employee_user):
-
     response = client.post(
         "/auth/login",
         json={
@@ -206,17 +237,20 @@ def employee_token(client, employee_user):
 
 @pytest.fixture()
 def admin_headers(admin_token):
-
-    return {"Authorization": f"Bearer {admin_token}"}
+    return {
+        "Authorization": f"Bearer {admin_token}",
+    }
 
 
 @pytest.fixture()
 def manager_headers(manager_token):
-
-    return {"Authorization": f"Bearer {manager_token}"}
+    return {
+        "Authorization": f"Bearer {manager_token}",
+    }
 
 
 @pytest.fixture()
 def employee_headers(employee_token):
-
-    return {"Authorization": f"Bearer {employee_token}"}
+    return {
+        "Authorization": f"Bearer {employee_token}",
+    }

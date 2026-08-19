@@ -34,6 +34,12 @@ const AddTaskModal = ({
   onClose,
   onSaveTask,
 }: Props) => {
+  const user = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  const isTeamMember =
+    user.role === "TEAM_MEMBER";
 
   const [title, setTitle] =
     useState("");
@@ -68,9 +74,7 @@ const AddTaskModal = ({
     useState("");
 
   useEffect(() => {
-
     if (editingTask) {
-
       setTitle(editingTask.title);
       setDescription(editingTask.description);
       setAssignedTo(editingTask.assigned_to);
@@ -79,26 +83,28 @@ const AddTaskModal = ({
       setRemarks(editingTask.remarks ?? "");
       setStartDate(editingTask.start_date);
       setDueDate(editingTask.due_date);
-
     } else {
-
       setTitle("");
       setDescription("");
-      setAssignedTo(0);
+      setAssignedTo(
+        isTeamMember ? user.id : 0
+      );
       setStatus("Not Started");
       setPriority("Medium");
       setRemarks("");
       setStartDate("");
       setDueDate("");
-
     }
-
-  }, [editingTask, isOpen]);
+  }, [
+    editingTask,
+    isOpen,
+    isTeamMember,
+    user.id,
+  ]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-
     if (!title.trim()) {
       alert("Task title is required.");
       return;
@@ -109,11 +115,17 @@ const AddTaskModal = ({
       return;
     }
 
-    if (assignedTo === 0) {
+    if (!isTeamMember && assignedTo === 0) {
       alert("Please select a team member.");
       return;
     }
-        if (!startDate) {
+
+    const assignedToUserId =
+      isTeamMember
+        ? user.id
+        : assignedTo;
+
+    if (!startDate) {
       alert("Please select a start date.");
       return;
     }
@@ -124,18 +136,16 @@ const AddTaskModal = ({
     }
 
     try {
-
       const token =
         localStorage.getItem("token");
 
       if (editingTask) {
-
         await api.put(
           `/tasks/${editingTask.id}`,
           {
             title,
             description,
-            assigned_to: assignedTo,
+            assigned_to: assignedToUserId,
             status,
             priority,
             remarks,
@@ -148,14 +158,12 @@ const AddTaskModal = ({
             },
           }
         );
-
       } else {
-
         await api.post(
           "/tasks",
           {
             project_id: projectId,
-            assigned_to: assignedTo,
+            assigned_to: assignedToUserId,
             title,
             description,
             priority,
@@ -168,69 +176,53 @@ const AddTaskModal = ({
             },
           }
         );
-
       }
 
       await onSaveTask();
 
       onClose();
-
     } catch (error) {
-
       console.error(error);
 
       if (axios.isAxiosError(error)) {
-
         alert(
           error.response?.data?.detail ??
-          (editingTask
-            ? "Failed to update task."
-            : "Failed to create task.")
+            (editingTask
+              ? "Failed to update task."
+              : "Failed to create task.")
         );
-
       } else {
-
         alert(
           editingTask
             ? "Failed to update task."
             : "Failed to create task."
         );
-
       }
-
     }
-
   };
 
   return (
-
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
 
         <div className="px-8 py-6 border-b border-gray-200">
-
           <h2 className="text-2xl font-bold text-slate-800">
-
             {editingTask
               ? "Edit Task"
               : "Add New Task"}
-
           </h2>
 
           <p className="text-sm text-gray-500 mt-1">
             Fill in the task details below.
           </p>
-
         </div>
 
         <div className="p-8">
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Task Title */}
+
+            {/* Task Title */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Task Title
               </label>
@@ -244,52 +236,46 @@ const AddTaskModal = ({
                 placeholder="Enter task title"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-
             </div>
 
             {/* Assigned To */}
 
-            <div>
+            {!isTeamMember && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Assigned To
+                </label>
 
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Assigned To
-              </label>
+                <select
+                  value={assignedTo}
+                  onChange={(e) =>
+                    setAssignedTo(
+                      Number(e.target.value)
+                    )
+                  }
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value={0}>
+                    Select Employee
+                  </option>
 
-              <select
-                value={assignedTo}
-                onChange={(e) =>
-                  setAssignedTo(
-                    Number(e.target.value)
-                  )
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-
-                <option value={0}>
-                  Select Employee
-                </option>
-
-                {employees.map(
-                  (employee) => (
-
-                    <option
-  key={employee.id}
-  value={employee.user_id}
->
-  {employee.name}
-</option>
-
-                  )
-                )}
-
-              </select>
-
-            </div>
+                  {employees.map(
+                    (employee) => (
+                      <option
+                        key={employee.id}
+                        value={employee.user_id}
+                      >
+                        {employee.name}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            )}
 
             {/* Status */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Status
               </label>
@@ -306,7 +292,6 @@ const AddTaskModal = ({
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
-
                 <option value="Not Started">
                   Not Started
                 </option>
@@ -318,15 +303,12 @@ const AddTaskModal = ({
                 <option value="Completed">
                   Completed
                 </option>
-
               </select>
-
             </div>
 
             {/* Priority */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Priority
               </label>
@@ -343,7 +325,6 @@ const AddTaskModal = ({
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
-
                 <option value="Low">
                   Low
                 </option>
@@ -355,15 +336,12 @@ const AddTaskModal = ({
                 <option value="High">
                   High
                 </option>
-
               </select>
-
             </div>
 
             {/* Start Date */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Start Date
               </label>
@@ -376,12 +354,11 @@ const AddTaskModal = ({
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-
             </div>
-                        {/* Due Date */}
+
+            {/* Due Date */}
 
             <div>
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Due Date
               </label>
@@ -394,13 +371,11 @@ const AddTaskModal = ({
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-
             </div>
 
             {/* Description */}
 
             <div className="md:col-span-2">
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description
               </label>
@@ -414,13 +389,11 @@ const AddTaskModal = ({
                 placeholder="Enter task description..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 resize-none outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-
             </div>
 
             {/* Remarks */}
 
             <div className="md:col-span-2">
-
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Remarks
               </label>
@@ -434,11 +407,9 @@ const AddTaskModal = ({
                 placeholder="Additional remarks (optional)"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 resize-none outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-
             </div>
 
           </div>
-
         </div>
 
         <div className="flex items-center justify-end gap-4 px-8 py-5 border-t border-gray-200 bg-gray-50 sticky bottom-0">
@@ -480,13 +451,9 @@ const AddTaskModal = ({
           </button>
 
         </div>
-
       </div>
-
     </div>
-
   );
-
 };
 
 export default AddTaskModal;

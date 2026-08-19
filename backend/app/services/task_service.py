@@ -55,8 +55,28 @@ def create_task(
 ):
     query = db.query(Project).filter(Project.id == task.project_id)
 
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role == UserRole.ADMIN:
+        pass
+
+    elif current_user.role == UserRole.MANAGER:
         query = query.filter(Project.created_by == current_user.id)
+
+    else:
+        query = (
+            query.join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Project.id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
+                ProjectEmployee.employee_id == Employee.id,
+            )
+        )
 
     project = query.first()
 
@@ -66,15 +86,26 @@ def create_task(
             detail="Project not found",
         )
 
+    assigned_to = task.assigned_to
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        if task.assigned_to != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Team members can only assign tasks to themselves",
+            )
+
+        assigned_to = current_user.id
+
     _resolve_project_member(
         db,
         task.project_id,
-        task.assigned_to,
+        assigned_to,
     )
 
     db_task = Task(
         project_id=task.project_id,
-        assigned_to=task.assigned_to,
+        assigned_to=assigned_to,
         title=task.title,
         description=task.description,
         priority=task.priority,
