@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import EmployeeDetails from "./pages/EmployeeDetails";
 import ChangePassword from "./pages/ChangePassword";
 import MyWork from "./pages/MyWork";
+import WeeklyPlanner from "./pages/WeeklyPlanner";
 function App() {
 
   return (
@@ -61,6 +62,11 @@ function App() {
       <EmployeeDetails />
     </ProtectedRoute>
   }
+/>
+
+<Route
+  path="/weekly-planner"
+  element={<WeeklyPlanner />}
 />
 
 

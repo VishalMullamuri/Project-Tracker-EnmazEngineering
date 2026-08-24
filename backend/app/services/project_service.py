@@ -12,7 +12,6 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
 )
-from app.schemas.task import TaskStatus
 
 
 def calculate_progress(
@@ -71,16 +70,17 @@ def update_project_status(
 
     if not tasks:
         project.status = "Not Started"
-    elif all(task.status == TaskStatus.COMPLETED for task in tasks):
+    elif all(task.status == "Completed" for task in tasks):
         project.status = "Completed"
-    elif any(task.status == TaskStatus.IN_PROGRESS for task in tasks):
-        project.status = "In Progress"
     elif date.today() > project.end_date:
         project.status = "Delayed"
+    elif any(task.status == "In Progress" for task in tasks):
+        project.status = "In Progress"
     else:
         project.status = "Not Started"
 
     db.flush()
+
 
 def create_project(
     db: Session,
@@ -102,6 +102,25 @@ def create_project(
     db.refresh(new_project)
 
     return new_project
+
+
+def get_project_status(
+    project: Project,
+    tasks: list[Task],
+) -> str:
+    if not tasks:
+        return "Not Started"
+
+    if all(task.status == "Completed" for task in tasks):
+        return "Completed"
+
+    if date.today() > project.end_date:
+        return "Delayed"
+
+    if any(task.status == "In Progress" for task in tasks):
+        return "In Progress"
+
+    return "Not Started"
 
 
 def get_all_projects(
@@ -137,10 +156,27 @@ def get_all_projects(
             .all()
         )
 
+    project_ids = [project.id for project in projects]
+
+    tasks_by_project: dict[int, list[Task]] = {
+        project_id: []
+        for project_id in project_ids
+    }
+
+    if project_ids:
+        tasks = (
+            db.query(Task)
+            .filter(Task.project_id.in_(project_ids))
+            .all()
+        )
+
+        for task in tasks:
+            tasks_by_project[task.project_id].append(task)
+
     for project in projects:
-        update_project_status(
-            db,
-            project.id,
+        project.status = get_project_status(
+            project,
+            tasks_by_project[project.id],
         )
 
     return projects
@@ -177,11 +213,19 @@ def get_project_by_id(
 
     project = query.first()
 
-    if project:
-        update_project_status(
-            db,
-            project.id,
-        )
+    if not project:
+        return None
+
+    tasks = (
+        db.query(Task)
+        .filter(Task.project_id == project.id)
+        .all()
+    )
+
+    project.status = get_project_status(
+        project,
+        tasks,
+    )
 
     return project
 

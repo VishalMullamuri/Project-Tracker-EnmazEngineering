@@ -29,7 +29,7 @@ const ProjectSummary = ({
   const pendingTasks =
     tasks.filter(
       (task) =>
-        task.status === "Pending"
+        task.status === "Not Started"
     ).length;
 
   const teamMembers =
@@ -72,7 +72,7 @@ const ProjectSummary = ({
       />
 
       <SummaryCard
-        title="Pending"
+        title="Not Started"
         value={pendingTasks}
         subtitle="Remaining Tasks"
         valueColor="text-orange-500"

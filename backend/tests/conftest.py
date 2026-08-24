@@ -20,12 +20,12 @@ if not url or not make_url(url).database.endswith("_test"):
 
 os.environ["DATABASE_URL"] = url
 
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.core.enums import UserRole
 from app.core.rate_limit import limiter
 from app.core.security import hash_password

@@ -15,6 +15,9 @@ from app.api.dashboard import router as dashboard_router
 from app.api.project import router as project_router
 from app.api.project_employee import router as project_employee_router
 from app.api.task import router as task_router
+from app.api.weekly_planner import (
+    router as weekly_planner_router,
+)
 from app.core.logging_config import configure_logging
 from app.core.rate_limit import limiter
 from app.database.database import SessionLocal
@@ -62,7 +65,10 @@ origins = [
 ]
 
 if "*" in origins:
-    raise RuntimeError("CORS_ORIGINS cannot contain '*' when allow_credentials=True.")
+    raise RuntimeError(
+        "CORS_ORIGINS cannot contain '*' when allow_credentials=True."
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -90,7 +96,10 @@ allowed_hosts = os.getenv("ALLOWED_HOSTS")
 if allowed_hosts:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=[host.strip() for host in allowed_hosts.split(",")],
+        allowed_hosts=[
+            host.strip()
+            for host in allowed_hosts.split(",")
+        ],
     )
 
 
@@ -103,7 +112,9 @@ async def security_headers(
 
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Referrer-Policy"] = (
+        "strict-origin-when-cross-origin"
+    )
 
     if ENV == "production":
         response.headers["Strict-Transport-Security"] = (
@@ -132,11 +143,14 @@ async def security_headers(
 app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(task_router)
+app.include_router(weekly_planner_router)
 app.include_router(dashboard_router)
 app.include_router(user.router)
 app.include_router(employee_router)
 app.include_router(project_employee_router)
 app.include_router(users_router)
+
+
 # -----------------------------------
 # Root
 # -----------------------------------
@@ -144,7 +158,9 @@ app.include_router(users_router)
 
 @app.get("/")
 def root():
-    return {"message": "Project Tracker Backend is Running 🚀"}
+    return {
+        "message": "Project Tracker Backend is Running 🚀"
+    }
 
 
 # -----------------------------------
@@ -166,7 +182,10 @@ def health_check():
 
     except Exception:
         return Response(
-            content='{"status":"unhealthy","database":"disconnected"}',
+            content=(
+                '{"status":"unhealthy",'
+                '"database":"disconnected"}'
+            ),
             status_code=503,
             media_type="application/json",
         )

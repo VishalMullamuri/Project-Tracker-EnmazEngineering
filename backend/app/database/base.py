@@ -10,3 +10,4 @@ from app.models.project_employee import (
 )
 from app.models.task import Task as Task
 from app.models.user import User as User
+from app.models.weekly_planner import WeeklyPlanner as WeeklyPlanner
