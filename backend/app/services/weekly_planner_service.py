@@ -1,14 +1,20 @@
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.enums import UserRole
 from app.models.employee import Employee
+from app.models.project import Project
+from app.models.project_employee import ProjectEmployee
 from app.models.user import User
 from app.models.weekly_planner import WeeklyPlanner
 from app.schemas.weekly_planner import (
     WeeklyPlannerCreate,
     WeeklyPlannerUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _get_employee(
@@ -39,11 +45,48 @@ def _get_employee(
     return employee
 
 
+def _ensure_manager_employee_access(
+    db: Session,
+    current_user: User,
+    employee_id: int,
+):
+    if current_user.role != UserRole.MANAGER:
+        return
+
+    assignment = (
+        db.query(ProjectEmployee)
+        .join(
+            Project,
+            Project.id == ProjectEmployee.project_id,
+        )
+        .join(
+            Employee,
+            Employee.id == ProjectEmployee.employee_id,
+        )
+        .filter(
+            Project.created_by == current_user.id,
+            ProjectEmployee.employee_id == employee_id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+
+
 def _get_weekly_task(
     db: Session,
     task_id: int,
 ):
-    return db.query(WeeklyPlanner).filter(WeeklyPlanner.id == task_id).first()
+    return (
+        db.query(WeeklyPlanner)
+        .filter(WeeklyPlanner.id == task_id)
+        .first()
+    )
 
 
 def _build_response(
@@ -51,10 +94,16 @@ def _build_response(
     planner_task: WeeklyPlanner,
 ):
     employee = (
-        db.query(Employee).filter(Employee.id == planner_task.employee_id).first()
+        db.query(Employee)
+        .filter(
+            Employee.id == planner_task.employee_id
+        )
+        .first()
     )
 
-    planner_task.employee_name = employee.name if employee else None
+    planner_task.employee_name = (
+        employee.name if employee else None
+    )
 
     return planner_task
 
@@ -69,18 +118,37 @@ def create_weekly_task(
         planner.employee_id,
     )
 
+    _ensure_manager_employee_access(
+        db,
+        current_user,
+        planner.employee_id,
+    )
+
     db_task = WeeklyPlanner(
         task=planner.task.strip(),
         employee_id=planner.employee_id,
         week_start=planner.week_start,
         status=planner.status.value,
-        remarks=(planner.remarks.strip() if planner.remarks else None),
+        remarks=(
+            planner.remarks.strip()
+            if planner.remarks
+            else None
+        ),
         created_by=current_user.id,
     )
 
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
+
+    logger.info(
+        "Weekly planner task created: "
+        "actor_user_id=%s target_task_id=%s "
+        "target_employee_id=%s",
+        current_user.id,
+        db_task.id,
+        db_task.employee_id,
+    )
 
     return _build_response(
         db,
@@ -98,13 +166,21 @@ def get_weekly_tasks(
     query = db.query(WeeklyPlanner)
 
     if week_start is not None:
-        query = query.filter(WeeklyPlanner.week_start == week_start)
+        query = query.filter(
+            WeeklyPlanner.week_start == week_start
+        )
 
     if status_filter is not None:
-        query = query.filter(WeeklyPlanner.status == status_filter.value)
+        query = query.filter(
+            WeeklyPlanner.status
+            == status_filter.value
+        )
 
     if employee_id is not None:
-        query = query.filter(WeeklyPlanner.employee_id == employee_id)
+        query = query.filter(
+            WeeklyPlanner.employee_id
+            == employee_id
+        )
 
     if current_user.role == UserRole.TEAM_MEMBER:
         employee = (
@@ -119,11 +195,27 @@ def get_weekly_tasks(
         if not employee:
             return []
 
-        query = query.filter(WeeklyPlanner.employee_id == employee.id)
+        query = query.filter(
+            WeeklyPlanner.employee_id
+            == employee.id
+        )
 
-    tasks = query.order_by(WeeklyPlanner.id.asc()).all()
+    elif current_user.role == UserRole.MANAGER:
+        query = query.filter(
+            WeeklyPlanner.created_by
+            == current_user.id
+        )
 
-    return [_build_response(db, task) for task in tasks]
+    tasks = (
+        query
+        .order_by(WeeklyPlanner.id.asc())
+        .all()
+    )
+
+    return [
+        _build_response(db, task)
+        for task in tasks
+    ]
 
 
 def get_weekly_task(
@@ -143,8 +235,10 @@ def get_weekly_task(
         employee = (
             db.query(Employee)
             .filter(
-                Employee.id == planner_task.employee_id,
-                Employee.user_id == current_user.id,
+                Employee.id
+                == planner_task.employee_id,
+                Employee.user_id
+                == current_user.id,
                 Employee.is_active.is_(True),
             )
             .first()
@@ -152,6 +246,19 @@ def get_weekly_task(
 
         if not employee:
             return None
+
+    elif current_user.role == UserRole.MANAGER:
+        if planner_task.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
+        _ensure_manager_employee_access(
+            db,
+            current_user,
+            planner_task.employee_id,
+        )
 
     return _build_response(
         db,
@@ -179,10 +286,28 @@ def update_weekly_task(
     if current_user.role == UserRole.TEAM_MEMBER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=("Team members can only view weekly planner tasks"),
+            detail=(
+                "Team members can only view "
+                "weekly planner tasks"
+            ),
         )
 
-    update_data = planner.model_dump(exclude_unset=True)
+    if current_user.role == UserRole.MANAGER:
+        if db_task.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
+        _ensure_manager_employee_access(
+            db,
+            current_user,
+            db_task.employee_id,
+        )
+
+    update_data = planner.model_dump(
+        exclude_unset=True
+    )
 
     if "employee_id" in update_data:
         _get_employee(
@@ -190,20 +315,51 @@ def update_weekly_task(
             update_data["employee_id"],
         )
 
+        _ensure_manager_employee_access(
+            db,
+            current_user,
+            update_data["employee_id"],
+        )
+
     if "status" in update_data:
-        update_data["status"] = update_data["status"].value
+        update_data["status"] = (
+            update_data["status"].value
+        )
 
-    if "task" in update_data and update_data["task"] is not None:
-        update_data["task"] = update_data["task"].strip()
+    if (
+        "task" in update_data
+        and update_data["task"] is not None
+    ):
+        update_data["task"] = (
+            update_data["task"].strip()
+        )
 
-    if "remarks" in update_data and update_data["remarks"] is not None:
-        update_data["remarks"] = update_data["remarks"].strip()
+    if (
+        "remarks" in update_data
+        and update_data["remarks"] is not None
+    ):
+        update_data["remarks"] = (
+            update_data["remarks"].strip()
+        )
 
     for field, value in update_data.items():
-        setattr(db_task, field, value)
+        setattr(
+            db_task,
+            field,
+            value,
+        )
 
     db.commit()
     db.refresh(db_task)
+
+    logger.info(
+        "Weekly planner task updated: "
+        "actor_user_id=%s target_task_id=%s "
+        "target_employee_id=%s",
+        current_user.id,
+        db_task.id,
+        db_task.employee_id,
+    )
 
     return _build_response(
         db,
@@ -227,8 +383,33 @@ def delete_weekly_task(
     if current_user.role == UserRole.TEAM_MEMBER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=("Team members cannot delete weekly planner tasks"),
+            detail=(
+                "Team members cannot delete "
+                "weekly planner tasks"
+            ),
         )
+
+    if current_user.role == UserRole.MANAGER:
+        if db_task.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
+        _ensure_manager_employee_access(
+            db,
+            current_user,
+            db_task.employee_id,
+        )
+
+    logger.info(
+        "Weekly planner task deleted: "
+        "actor_user_id=%s target_task_id=%s "
+        "target_employee_id=%s",
+        current_user.id,
+        db_task.id,
+        db_task.employee_id,
+    )
 
     db.delete(db_task)
     db.commit()
