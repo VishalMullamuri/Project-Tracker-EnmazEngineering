@@ -864,7 +864,7 @@ def test_manager_cannot_get_another_managers_task_by_id(
         headers=manager2_headers,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_manager_cannot_create_task_for_another_managers_employee(

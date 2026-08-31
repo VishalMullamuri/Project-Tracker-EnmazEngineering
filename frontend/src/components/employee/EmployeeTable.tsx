@@ -27,85 +27,70 @@ const EmployeeTable = ({
   refreshEmployees,
   refreshDashboard,
 }: Props) => {
-
   const navigate = useNavigate();
 
-  const [search, setSearch] =
-    useState("");
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
-
-  const [openModal, setOpenModal] =
-    useState(false);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [openModal, setOpenModal] = useState(false);
 
   const employeesPerPage = 5;
 
   const createEmployee = async (employee: {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  role: "MANAGER" | "TEAM_MEMBER";
-}) => {
-  try {
-    const token = localStorage.getItem("token");
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: "MANAGER" | "TEAM_MEMBER";
+  }) => {
+    try {
+      const token = localStorage.getItem("token");
 
-    await api.post(
-      "/employees",
-      employee,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      await api.post(
+        "/employees",
+        employee,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await refreshEmployees();
+      await refreshDashboard();
+
+      setOpenModal(false);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        alert(
+          apiErrorMessage(
+            error.response?.data?.detail
+          )
+        );
+      } else {
+        alert("Failed to create employee.");
       }
-    );
 
-    await refreshEmployees();
-    await refreshDashboard();
-
-    setOpenModal(false);
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      alert(
-  apiErrorMessage(
-    error.response?.data?.detail
-  )
-);
-    } else {
-      alert("Failed to create employee.");
+      throw error;
     }
-  }
-};
+  };
 
   const filteredEmployees =
     employees.filter((employee) => {
-
       return (
-
         employee.name
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
-
+          .includes(search.toLowerCase()) ||
         employee.email
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-
+          .includes(search.toLowerCase())
       );
-
     });
 
   const indexOfLastEmployee =
-    currentPage *
-    employeesPerPage;
+    currentPage * employeesPerPage;
 
   const indexOfFirstEmployee =
-    indexOfLastEmployee -
-    employeesPerPage;
+    indexOfLastEmployee - employeesPerPage;
 
   const currentEmployees =
     filteredEmployees.slice(
@@ -125,9 +110,7 @@ const EmployeeTable = ({
   const isAdmin = user.role === "ADMIN";
 
   return (
-
     <>
-
       <AddEmployeeModal
         isOpen={openModal}
         onClose={() =>
@@ -139,8 +122,6 @@ const EmployeeTable = ({
       />
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm mt-6 overflow-hidden">
-
-        {/* Header */}
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
 
@@ -156,13 +137,8 @@ const EmployeeTable = ({
               placeholder="Search employee..."
               value={search}
               onChange={(e) => {
-
-                setSearch(
-                  e.target.value
-                );
-
+                setSearch(e.target.value);
                 setCurrentPage(1);
-
               }}
               className="
                 w-64
@@ -182,24 +158,23 @@ const EmployeeTable = ({
           </div>
 
           {isAdmin && (
-  <button
-    onClick={() => setOpenModal(true)}
-    className="
-      px-4
-      py-2
-      bg-blue-600
-      text-white
-      rounded-lg
-      hover:bg-blue-700
-      transition
-    "
-  >
-    + Add Employee
-  </button>
-)}
+            <button
+              onClick={() => setOpenModal(true)}
+              className="
+                px-4
+                py-2
+                bg-blue-600
+                text-white
+                rounded-lg
+                hover:bg-blue-700
+                transition
+              "
+            >
+              + Add Employee
+            </button>
+          )}
 
         </div>
-                {/* Table */}
 
         <table className="w-full">
 
@@ -262,6 +237,7 @@ const EmployeeTable = ({
                   </td>
 
                   <td className="py-3 text-center">
+
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         employee.role === "MANAGER"
@@ -273,6 +249,7 @@ const EmployeeTable = ({
                         ? "Manager"
                         : "Team Member"}
                     </span>
+
                   </td>
 
                   <td className="py-3 text-center text-gray-700">
@@ -280,41 +257,42 @@ const EmployeeTable = ({
                   </td>
 
                   <td className="py-3 text-center">
-  {employee.projects ?? 0}
-</td>
+                    {employee.projects ?? 0}
+                  </td>
 
                   <td className="py-3 text-center">
 
                     <button
-  onClick={() =>
-    navigate(`/employee/${employee.id}`, {
-      state: {
-        employee,
-      },
-    })
-  }
-  className="
-    inline-flex
-    items-center
-    justify-center
-    gap-2
-    w-24
-    py-2
-    rounded-lg
-    bg-blue-600
-    text-white
-    text-sm
-    font-medium
-    hover:bg-blue-700
-    transition
-  "
->
+                      onClick={() =>
+                        navigate(
+                          `/employee/${employee.id}`,
+                          {
+                            state: {
+                              employee,
+                            },
+                          }
+                        )
+                      }
+                      className="
+                        inline-flex
+                        items-center
+                        justify-center
+                        gap-2
+                        w-24
+                        py-2
+                        rounded-lg
+                        bg-blue-600
+                        text-white
+                        text-sm
+                        font-medium
+                        hover:bg-blue-700
+                        transition
+                      "
+                    >
+                      <Eye size={16} />
+                      View
+                    </button>
 
-  <Eye size={16} />
-
-  View
-
-</button>
                   </td>
 
                 </tr>
@@ -325,8 +303,6 @@ const EmployeeTable = ({
           </tbody>
 
         </table>
-
-        {/* Empty State */}
 
         {filteredEmployees.length === 0 && (
 
@@ -347,8 +323,6 @@ const EmployeeTable = ({
           </div>
 
         )}
-
-        {/* Footer */}
 
         <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 bg-gray-50">
 
@@ -373,11 +347,8 @@ const EmployeeTable = ({
         </div>
 
       </div>
-
     </>
-
   );
-
 };
 
 export default EmployeeTable;
