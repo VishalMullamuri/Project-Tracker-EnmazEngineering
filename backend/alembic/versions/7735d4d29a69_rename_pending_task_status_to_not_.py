@@ -30,4 +30,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    pass
+    op.execute(
+        """
+        UPDATE tasks
+        SET status = 'Pending'
+        WHERE status = 'Not Started'
+        """
+    )

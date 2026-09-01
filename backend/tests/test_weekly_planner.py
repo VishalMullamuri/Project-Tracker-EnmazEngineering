@@ -932,7 +932,7 @@ def test_manager_cannot_update_another_managers_task(
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_manager_cannot_reassign_task_to_another_managers_employee(
@@ -1039,7 +1039,7 @@ def test_manager_cannot_delete_another_managers_task(
         headers=manager_headers,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 # ============================================================
@@ -1187,3 +1187,81 @@ def test_weekly_planner_employee_filter(
     assert len(data) == 1
     assert data[0]["task"] == "Employee One Task"
     assert data[0]["employee_id"] == employee_user.id
+
+def test_manager_cannot_update_another_managers_task_by_id(
+    client,
+    db,
+    manager_user,
+    manager_headers,
+    employee_user,
+):
+    assign_employee_to_manager_project(
+        db,
+        manager_user,
+        employee_user,
+    )
+
+    create_response = create_weekly_task(
+        client,
+        manager_headers,
+        employee_user.id,
+    )
+
+    assert create_response.status_code == 200
+
+    task_id = create_response.json()["id"]
+
+    create_second_manager(db)
+
+    manager2_headers = get_manager_headers(
+        client,
+        "manager2@test.com",
+        "Manager2@123",
+    )
+
+    response = client.put(
+        f"/weekly-planner/{task_id}",
+        headers=manager2_headers,
+        json={"task": "Updated task"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_manager_cannot_delete_another_managers_task_by_id(
+    client,
+    db,
+    manager_user,
+    manager_headers,
+    employee_user,
+):
+    assign_employee_to_manager_project(
+        db,
+        manager_user,
+        employee_user,
+    )
+
+    create_response = create_weekly_task(
+        client,
+        manager_headers,
+        employee_user.id,
+    )
+
+    assert create_response.status_code == 200
+
+    task_id = create_response.json()["id"]
+
+    create_second_manager(db)
+
+    manager2_headers = get_manager_headers(
+        client,
+        "manager2@test.com",
+        "Manager2@123",
+    )
+
+    response = client.delete(
+        f"/weekly-planner/{task_id}",
+        headers=manager2_headers,
+    )
+
+    assert response.status_code == 404

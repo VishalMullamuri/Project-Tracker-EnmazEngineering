@@ -286,8 +286,8 @@ def update_weekly_task(
     if current_user.role == UserRole.MANAGER:
         if db_task.created_by != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Weekly planner task not found",
             )
 
     update_data = planner.model_dump(
@@ -377,8 +377,8 @@ def delete_weekly_task(
     if current_user.role == UserRole.MANAGER:
         if db_task.created_by != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Weekly planner task not found",
             )
 
     logger.info(
