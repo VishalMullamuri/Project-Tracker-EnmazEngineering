@@ -17,7 +17,6 @@ class TaskPriority(str, Enum):
 class TaskStatus(str, Enum):
     NOT_STARTED = "Not Started"
     IN_PROGRESS = "In Progress"
-    DELAYED = "Delayed"
     COMPLETED = "Completed"
 
 

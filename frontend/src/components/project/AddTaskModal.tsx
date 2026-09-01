@@ -10,7 +10,7 @@ export type Task = {
   assigned_to_name?: string;
   title: string;
   description: string;
-  status: "Not Started" | "In Progress" | "Delayed" | "Completed";
+  status: "Not Started" | "In Progress" | "Completed";
   priority: "Low" | "Medium" | "High";
   remarks: string;
   start_date: string;
@@ -54,7 +54,6 @@ const AddTaskModal = ({
   useState<
     | "Not Started"
     | "In Progress"
-    | "Delayed"
     | "Completed"
   >("Not Started");
 
@@ -288,7 +287,6 @@ const AddTaskModal = ({
                     e.target.value as
                       | "Not Started"
                       | "In Progress"
-                      | "Delayed"
                       | "Completed"
                   )
                 }
@@ -300,10 +298,6 @@ const AddTaskModal = ({
 
                 <option value="In Progress">
                   In Progress
-                </option>
-
-                <option value="Delayed">
-                  Delayed
                 </option>
 
                 <option value="Completed">

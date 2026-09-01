@@ -366,10 +366,6 @@ const TaskTable = ({
                           In Progress
                         </option>
 
-                        <option value="Delayed">
-                          Delayed
-                        </option>
-
                         <option value="Completed">
                           Completed
                         </option>
