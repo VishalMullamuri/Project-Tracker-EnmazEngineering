@@ -11,7 +11,10 @@ from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
 )
-from app.services.project_service import calculate_progress
+from app.services.project_service import (
+    calculate_progress,
+    update_project_status,
+)
 
 
 def _resolve_project_member(
@@ -52,8 +55,28 @@ def create_task(
 ):
     query = db.query(Project).filter(Project.id == task.project_id)
 
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role == UserRole.ADMIN:
+        pass
+
+    elif current_user.role == UserRole.MANAGER:
         query = query.filter(Project.created_by == current_user.id)
+
+    else:
+        query = (
+            query.join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Project.id,
+            )
+            .join(
+                Employee,
+                Employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Employee.user_id == current_user.id,
+                Employee.is_active.is_(True),
+                ProjectEmployee.employee_id == Employee.id,
+            )
+        )
 
     project = query.first()
 
@@ -63,21 +86,32 @@ def create_task(
             detail="Project not found",
         )
 
+    assigned_to = task.assigned_to
+
+    if current_user.role == UserRole.TEAM_MEMBER:
+        if task.assigned_to != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Team members can only assign tasks to themselves",
+            )
+
+        assigned_to = current_user.id
+
     _resolve_project_member(
         db,
         task.project_id,
-        task.assigned_to,
+        assigned_to,
     )
 
     db_task = Task(
         project_id=task.project_id,
-        assigned_to=task.assigned_to,
+        assigned_to=assigned_to,
         title=task.title,
         description=task.description,
         priority=task.priority,
         start_date=task.start_date,
         due_date=task.due_date,
-        status="Pending",
+        status="Not Started",
         created_by=current_user.id,
     )
 
@@ -85,6 +119,11 @@ def create_task(
     db.flush()
 
     calculate_progress(
+        db,
+        db_task.project_id,
+    )
+
+    update_project_status(
         db,
         db_task.project_id,
     )
@@ -267,16 +306,23 @@ def update_task(
     if role == "TEAM_MEMBER":
         allowed_fields = {"status", "remarks"}
 
-        forbidden_fields = sorted(set(update_data.keys()) - allowed_fields)
+        forbidden_fields = sorted(
+            set(update_data.keys()) - allowed_fields
+        )
 
         if forbidden_fields:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=("Team members cannot modify: " + ", ".join(forbidden_fields)),
+                detail=(
+                    "Team members cannot modify: "
+                    + ", ".join(forbidden_fields)
+                ),
             )
 
         update_data = {
-            key: value for key, value in update_data.items() if key in allowed_fields
+            key: value
+            for key, value in update_data.items()
+            if key in allowed_fields
         }
 
     if "assigned_to" in update_data:
@@ -296,10 +342,19 @@ def update_task(
         db_task.project_id,
     )
 
+    update_project_status(
+        db,
+        db_task.project_id,
+    )
+
     db.commit()
     db.refresh(db_task)
 
-    project = db.query(Project).filter(Project.id == db_task.project_id).first()
+    project = (
+        db.query(Project)
+        .filter(Project.id == db_task.project_id)
+        .first()
+    )
 
     if project:
         db_task.project_name = project.project_name
@@ -333,6 +388,11 @@ def delete_task(
     db.flush()
 
     calculate_progress(
+        db,
+        project_id,
+    )
+
+    update_project_status(
         db,
         project_id,
     )

@@ -160,13 +160,24 @@ const AddEmployeeModal = ({
                 return;
               }
 
-              await onAddEmployee({
-                name,
-                email,
-                phone,
-                password,
-                role: role as "MANAGER" | "TEAM_MEMBER",
-              });
+              try {
+                await onAddEmployee({
+                  name,
+                  email,
+                  phone,
+                  password,
+                  role: role as "MANAGER" | "TEAM_MEMBER",
+                });
+              } catch {
+                return;
+              }
+
+              // Reset form after successful creation
+              setName("");
+              setEmail("");
+              setPhone("");
+              setPassword("");
+              setRole("");
             }}
             className="px-5 py-2 bg-blue-600 text-white rounded-lg"
           >

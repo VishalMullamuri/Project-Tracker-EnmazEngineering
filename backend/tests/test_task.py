@@ -67,7 +67,7 @@ def test_create_task(
     )
 
     assert task["title"] == "Task 1"
-    assert task["status"] == "Pending"
+    assert task["status"] == "Not Started"
 
 
 def test_get_all_tasks(
@@ -165,28 +165,6 @@ def test_delete_task(
     )
 
     assert response.status_code == 200
-
-
-def test_team_member_cannot_create_task(
-    client,
-    employee_headers,
-    employee_user,
-):
-    response = client.post(
-        "/tasks",
-        headers=employee_headers,
-        json={
-            "project_id": 1,
-            "assigned_to": employee_user.user_id,
-            "title": "Unauthorized",
-            "description": "Unauthorized",
-            "priority": "High",
-            "start_date": str(date.today()),
-            "due_date": str(date.today()),
-        },
-    )
-
-    assert response.status_code == 403
 
 
 def test_get_my_work(
@@ -417,3 +395,55 @@ def test_task_update_rejects_explicit_nulls(
     )
 
     assert response.status_code == 422
+
+
+def test_team_member_can_create_task(
+    client,
+    employee_headers,
+    employee_user,
+    project,
+):
+    response = client.post(
+        "/tasks",
+        headers=employee_headers,
+        json={
+            "project_id": project.id,
+            "assigned_to": employee_user.user_id,
+            "title": "Team Member Task",
+            "description": "Created by team member",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["assigned_to"] == employee_user.user_id
+    assert data["created_by"] == employee_user.user_id
+
+
+def test_team_member_cannot_assign_task_to_other_user(
+    client,
+    employee_headers,
+    employee_user,
+    manager_user,
+    project,
+):
+    response = client.post(
+        "/tasks",
+        headers=employee_headers,
+        json={
+            "project_id": project.id,
+            "assigned_to": manager_user.id,
+            "title": "Unauthorized Assignment",
+            "description": "Should fail",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert response.status_code == 403

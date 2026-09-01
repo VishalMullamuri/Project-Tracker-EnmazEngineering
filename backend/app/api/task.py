@@ -36,7 +36,7 @@ router = APIRouter(
 def create_new_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(get_current_user),
 ):
     return create_task(
         db,

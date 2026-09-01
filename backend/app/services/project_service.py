@@ -23,7 +23,11 @@ def calculate_progress(
     if not project:
         return 0
 
-    total_tasks = db.query(Task).filter(Task.project_id == project_id).count()
+    total_tasks = (
+        db.query(Task)
+        .filter(Task.project_id == project_id)
+        .count()
+    )
 
     if total_tasks == 0:
         project.progress = 0
@@ -42,10 +46,40 @@ def calculate_progress(
 
     project.progress = progress
 
-    # Only persist progress.
-    project.progress = progress
-
     return progress
+
+
+def update_project_status(
+    db: Session,
+    project_id: int,
+):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id)
+        .first()
+    )
+
+    if not project:
+        return
+
+    tasks = (
+        db.query(Task)
+        .filter(Task.project_id == project_id)
+        .all()
+    )
+
+    if not tasks:
+        project.status = "Not Started"
+    elif all(task.status == "Completed" for task in tasks):
+        project.status = "Completed"
+    elif date.today() > project.end_date:
+        project.status = "Delayed"
+    elif any(task.status == "In Progress" for task in tasks):
+        project.status = "In Progress"
+    else:
+        project.status = "Not Started"
+
+    db.flush()
 
 
 def create_project(
@@ -70,6 +104,25 @@ def create_project(
     return new_project
 
 
+def get_project_status(
+    project: Project,
+    tasks: list[Task],
+) -> str:
+    if not tasks:
+        return "Not Started"
+
+    if all(task.status == "Completed" for task in tasks):
+        return "Completed"
+
+    if date.today() > project.end_date:
+        return "Delayed"
+
+    if any(task.status == "In Progress" for task in tasks):
+        return "In Progress"
+
+    return "Not Started"
+
+
 def get_all_projects(
     db: Session,
     current_user: User,
@@ -78,7 +131,11 @@ def get_all_projects(
         projects = db.query(Project).all()
 
     elif current_user.role == UserRole.MANAGER:
-        projects = db.query(Project).filter(Project.created_by == current_user.id).all()
+        projects = (
+            db.query(Project)
+            .filter(Project.created_by == current_user.id)
+            .all()
+        )
 
     else:
         projects = (
@@ -99,15 +156,28 @@ def get_all_projects(
             .all()
         )
 
+    project_ids = [project.id for project in projects]
+
+    tasks_by_project: dict[int, list[Task]] = {
+        project_id: []
+        for project_id in project_ids
+    }
+
+    if project_ids:
+        tasks = (
+            db.query(Task)
+            .filter(Task.project_id.in_(project_ids))
+            .all()
+        )
+
+        for task in tasks:
+            tasks_by_project[task.project_id].append(task)
+
     for project in projects:
-        if project.progress == 100:
-            project.status = "Completed"
-        elif date.today() > project.end_date:
-            project.status = "Delayed"
-        elif project.progress == 0:
-            project.status = "Not Started"
-        else:
-            project.status = "In Progress"
+        project.status = get_project_status(
+            project,
+            tasks_by_project[project.id],
+        )
 
     return projects
 
@@ -143,15 +213,19 @@ def get_project_by_id(
 
     project = query.first()
 
-    if project:
-        if project.progress == 100:
-            project.status = "Completed"
-        elif date.today() > project.end_date:
-            project.status = "Delayed"
-        elif project.progress == 0:
-            project.status = "Not Started"
-        else:
-            project.status = "In Progress"
+    if not project:
+        return None
+
+    tasks = (
+        db.query(Task)
+        .filter(Task.project_id == project.id)
+        .all()
+    )
+
+    project.status = get_project_status(
+        project,
+        tasks,
+    )
 
     return project
 
@@ -184,17 +258,13 @@ def update_project(
         db_project.id,
     )
 
+    update_project_status(
+        db,
+        db_project.id,
+    )
+
     db.commit()
     db.refresh(db_project)
-
-    if db_project.progress == 100:
-        db_project.status = "Completed"
-    elif date.today() > db_project.end_date:
-        db_project.status = "Delayed"
-    elif db_project.progress == 0:
-        db_project.status = "Not Started"
-    else:
-        db_project.status = "In Progress"
 
     return db_project
 

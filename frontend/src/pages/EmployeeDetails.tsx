@@ -201,7 +201,7 @@ if (employee.role === "MANAGER") {
         employeeTasks.filter(
           (task: Task) =>
             task.status ===
-            "Pending"
+            "Not Started"
         ).length
       );
 
@@ -551,7 +551,7 @@ if (employee.role === "MANAGER") {
   <div className="flex justify-between items-center pb-3 border-b">
 
     <span className="text-gray-600 font-medium">
-      ⏳ Pending Tasks
+      ⏳ Not Started Tasks
     </span>
 
     <span className="text-xl font-bold text-orange-500">

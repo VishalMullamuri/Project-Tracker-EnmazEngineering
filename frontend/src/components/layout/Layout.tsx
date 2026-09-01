@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
+  CalendarDays,
   LogOut,
   UserCircle,
 } from "lucide-react";
@@ -55,6 +56,9 @@ const Layout = ({ children }: LayoutProps) => {
             </h1>
 
             <div className="flex items-center gap-4">
+
+              {/* Dashboard */}
+
               <button
                 onClick={() => navigate("/dashboard")}
                 className={`flex items-center justify-center gap-2 w-44 h-12 rounded-xl text-base font-semibold transition-all duration-200 ${
@@ -66,6 +70,8 @@ const Layout = ({ children }: LayoutProps) => {
                 <LayoutDashboard size={18} />
                 Dashboard
               </button>
+
+              {/* Employees - Manager/Admin Only */}
 
               {isManager && (
                 <button
@@ -80,6 +86,21 @@ const Layout = ({ children }: LayoutProps) => {
                   Employees
                 </button>
               )}
+
+              {/* Weekly Planner - All Roles */}
+
+              <button
+                onClick={() => navigate("/weekly-planner")}
+                className={`flex items-center justify-center gap-2 w-44 h-12 rounded-xl text-base font-semibold transition-all duration-200 ${
+                  location.pathname === "/weekly-planner"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                <CalendarDays size={18} />
+                Weekly Planner
+              </button>
+
             </div>
           </div>
 

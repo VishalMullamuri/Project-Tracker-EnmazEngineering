@@ -11,8 +11,8 @@ from sqlalchemy.sql import func
 from app.database.database import Base
 
 
-class Task(Base):
-    __tablename__ = "tasks"
+class WeeklyPlanner(Base):
+    __tablename__ = "weekly_planner"
 
     id = Column(
         Integer,
@@ -20,46 +20,30 @@ class Task(Base):
         index=True,
     )
 
-    project_id = Column(
-        Integer,
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    assigned_to = Column(
-        Integer,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    title = Column(
+    task = Column(
         String(200),
         nullable=False,
     )
 
-    description = Column(
-        String(500),
-        nullable=True,
+    employee_id = Column(
+        Integer,
+        ForeignKey(
+            "employees.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+
+    week_start = Column(
+        Date,
+        nullable=False,
+        index=True,
     )
 
     status = Column(
         String(50),
+        nullable=False,
         default="Not Started",
-    )
-
-    priority = Column(
-        String(50),
-        default="Medium",
-    )
-
-    start_date = Column(
-        Date,
-        nullable=False,
-    )
-
-    due_date = Column(
-        Date,
-        nullable=False,
     )
 
     remarks = Column(
@@ -69,11 +53,22 @@ class Task(Base):
 
     created_by = Column(
         Integer,
-        ForeignKey("users.id"),
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
     )
 
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )

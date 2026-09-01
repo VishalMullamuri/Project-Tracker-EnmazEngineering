@@ -144,7 +144,7 @@ const isManager =
         transition
       "
     >
-      Team Members
+      Add Team Members
     </button>
 
     <button
@@ -170,23 +170,14 @@ const isManager =
 
             </div>
 
-           <div className="mt-5 space-y-3">
+<div className="mt-6 max-w-3xl">
+  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+    Description:
+  </p>
 
-  <p className="text-sm text-gray-600 leading-7">
+  <p className="text-sm leading-6 text-gray-600">
     {project.description}
   </p>
-
-  <p className="text-sm text-gray-500 leading-7">
-    This project is currently in the{" "}
-    <span className="font-semibold text-gray-700">
-      {project.status}
-    </span>{" "}
-    stage and is scheduled to be delivered on{" "}
-    <span className="font-semibold text-gray-700">
-      {project.end_date}
-    </span>
-  </p>
-
 </div>
 
           </div>

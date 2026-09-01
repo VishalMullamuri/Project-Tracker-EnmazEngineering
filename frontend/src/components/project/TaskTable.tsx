@@ -6,7 +6,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-
 import api from "../../api/axios";
 
 import Pagination from "../dashboard/Pagination";
@@ -31,14 +30,17 @@ const TaskTable = ({
   refreshTasks,
   refreshProject,
 }: Props) => {
-
   const user = JSON.parse(
-  localStorage.getItem("user") || "{}"
-);
+    localStorage.getItem("user") || "{}"
+  );
 
-const isManager =
-  user.role === "MANAGER" ||
-  user.role === "ADMIN";
+  const isManager =
+    user.role === "MANAGER" ||
+    user.role === "ADMIN";
+
+  const canCreateTask =
+    isManager ||
+    user.role === "TEAM_MEMBER";
 
   const [search, setSearch] =
     useState("");
@@ -55,7 +57,6 @@ const isManager =
   const deleteTask = async (
     taskId: number
   ) => {
-
     const confirmDelete =
       window.confirm(
         "Delete this task?"
@@ -64,7 +65,6 @@ const isManager =
     if (!confirmDelete) return;
 
     try {
-
       const token =
         localStorage.getItem("token");
 
@@ -78,77 +78,63 @@ const isManager =
       );
 
       await refreshTasks();
-
+      await refreshProject();
     } catch (error) {
-
       console.error(error);
-
       alert("Failed to delete task.");
-
     }
-
   };
 
   const updateTaskStatus = async (
-  task: Task,
-  newStatus: string
-) => {
+    task: Task,
+    newStatus: string
+  ) => {
+    try {
+      const token =
+        localStorage.getItem("token");
 
-  try {
+      const role =
+        JSON.parse(
+          localStorage.getItem("user") || "{}"
+        ).role;
 
-    const token =
-      localStorage.getItem("token");
+      const payload =
+        role === "TEAM_MEMBER"
+          ? {
+              status: newStatus,
+              remarks: task.remarks,
+            }
+          : {
+              assigned_to: task.assigned_to,
+              title: task.title,
+              description: task.description,
+              status: newStatus,
+              priority: task.priority,
+              remarks: task.remarks,
+              start_date: task.start_date,
+              due_date: task.due_date,
+            };
 
-    const role = JSON.parse(localStorage.getItem("user") || "{}").role;
+      await api.put(
+        `/tasks/${task.id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-const payload =
-  role === "TEAM_MEMBER"
-    ? {
-        status: newStatus,
-        remarks: task.remarks,
-      }
-    : {
-        assigned_to: task.assigned_to,
-        title: task.title,
-        description: task.description,
-        status: newStatus,
-        priority: task.priority,
-        remarks: task.remarks,
-        start_date: task.start_date,
-        due_date: task.due_date,
-      };
-
-await api.put(
-  `/tasks/${task.id}`,
-  payload,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-
-    await refreshTasks();
-
-setTimeout(async () => {
-  await refreshProject();
-}, 200);
-
-  } catch (error) {
-
-    console.error(error);
-
-    alert("Failed to update task status.");
-
-  }
-
-};
-
-
+      await refreshTasks();
+      await refreshProject();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update task status.");
+    }
+  };
 
   const filteredTasks =
     tasks.filter((task) => {
-
       const matchesSearch =
         task.title
           .toLowerCase()
@@ -161,40 +147,35 @@ setTimeout(async () => {
 
       if (tab === "Open")
         return (
-          task.status !==
-            "Completed" &&
+          task.status !== "Completed" &&
           matchesSearch
         );
 
       return (
-        task.status ===
-          "Completed" &&
+        task.status === "Completed" &&
         matchesSearch
-
       );
     });
 
   return (
     <>
+      {canCreateTask && (
+        <AddTaskModal
+          isOpen={openModal}
+          onClose={() => {
+            setOpenModal(false);
+            setEditingTask(null);
+          }}
+          editingTask={editingTask}
+          projectId={projectId}
+          employees={employees}
+          onSaveTask={async () => {
+            await refreshTasks();
+            await refreshProject();
+          }}
+        />
+      )}
 
-{isManager && (
-
-<AddTaskModal
-  isOpen={openModal}
-  onClose={() => {
-    setOpenModal(false);
-    setEditingTask(null);
-  }}
-  editingTask={editingTask}
-  projectId={projectId}
-  employees={employees}
-  onSaveTask={async () => {
-    await refreshTasks();
-    await refreshProject();
-  }}
-/>
-
-)}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm mt-6 overflow-hidden">
 
         {/* Header */}
@@ -202,7 +183,6 @@ setTimeout(async () => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
 
           <div className="relative">
-
             <Search
               size={16}
               className="absolute left-3 top-3 text-gray-400"
@@ -229,7 +209,6 @@ setTimeout(async () => {
                 focus:ring-blue-500
               "
             />
-
           </div>
 
           <div className="flex items-center gap-3">
@@ -277,28 +256,25 @@ setTimeout(async () => {
 
             </div>
 
-           {isManager && (
-
-<button
-  onClick={() => {
-    setEditingTask(null);
-    setOpenModal(true);
-  }}
-  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
->
-  <Plus size={16} />
-  Add Task
-</button>
-
-)}
+            {canCreateTask && (
+              <button
+                onClick={() => {
+                  setEditingTask(null);
+                  setOpenModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+              >
+                <Plus size={16} />
+                Add Task
+              </button>
+            )}
 
           </div>
-
         </div>
 
         <table className="w-full">
-                    <thead className="bg-gray-50">
 
+          <thead className="bg-gray-50">
             <tr className="text-sm text-gray-600">
 
               <th className="py-3 text-center w-16 font-semibold">
@@ -334,147 +310,136 @@ setTimeout(async () => {
               </th>
 
             </tr>
-
           </thead>
 
           <tbody>
 
-            {filteredTasks.map((task, index) => (
+            {filteredTasks.map(
+              (task, index) => (
+                <tr
+                  key={task.id}
+                  className="border-b border-gray-100 hover:bg-blue-50 transition-colors duration-200"
+                >
 
-              <tr
-                key={task.id}
-                className="border-b border-gray-100 hover:bg-blue-50 transition-colors duration-200"
-              >
+                  <td className="py-3 text-center text-sm font-medium">
+                    {index + 1}
+                  </td>
 
-                <td className="py-3 text-center text-sm font-medium">
-                  {index + 1}
-                </td>
+                  <td className="py-3 text-sm font-medium">
+                    {task.title}
+                  </td>
 
-                <td className="py-3 text-sm font-medium">
-                  {task.title}
-                </td>
+                  <td className="py-3 text-sm">
+                    {task.description}
+                  </td>
 
-                <td className="py-3 text-sm">
-                  {task.description}
-                </td>
+                  <td className="py-3 text-center">
 
-<td className="py-3 text-center">
+                    {isManager ? (
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                          task.status === "Completed"
+                            ? "bg-green-100 text-green-700"
+                            : task.status === "In Progress"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}
+                      >
+                        {task.status}
+                      </span>
+                    ) : (
+                      <select
+                        value={task.status}
+                        onChange={(e) =>
+                          updateTaskStatus(
+                            task,
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-2 py-1 text-sm"
+                      >
+                        <option value="Not Started">
+                          Not Started
+                        </option>
 
-  {isManager ? (
+                        <option value="In Progress">
+                          In Progress
+                        </option>
 
-    <span
-      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-        task.status === "Completed"
-          ? "bg-green-100 text-green-700"
-          : task.status === "In Progress"
-          ? "bg-blue-100 text-blue-700"
-          : "bg-orange-100 text-orange-700"
-      }`}
-    >
-      {task.status}
-    </span>
+                        <option value="Completed">
+                          Completed
+                        </option>
+                      </select>
+                    )}
 
-  ) : (
+                  </td>
 
-    <select
-      value={task.status}
-      onChange={(e) =>
-        updateTaskStatus(
-          task,
-          e.target.value
-        )
-      }
-      className="border rounded-lg px-2 py-1 text-sm"
-    >
-      <option value="Pending">
-        Pending
-      </option>
+                  <td className="py-3 text-center">
 
-      <option value="In Progress">
-        In Progress
-      </option>
+                    <span
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                        task.priority === "High"
+                          ? "bg-red-100 text-red-700"
+                          : task.priority === "Medium"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
 
-      <option value="Completed">
-        Completed
-      </option>
+                  </td>
 
-    </select>
+                  <td className="py-3 text-center text-sm">
+                    {task.assigned_to_name ?? "-"}
+                  </td>
 
-  )}
+                  <td className="py-3 text-center text-sm">
+                    {task.due_date}
+                  </td>
 
-</td>
+                  <td className="py-3 text-center">
 
-                <td className="py-3 text-center">
+                    <div className="flex justify-center gap-2">
 
-                  <span
-                    className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                      task.priority === "High"
-                        ? "bg-red-100 text-red-700"
-                        : task.priority === "Medium"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
+                      {isManager && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingTask(task);
+                              setOpenModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition"
+                          >
+                            <Pencil size={15} />
+                            Edit
+                          </button>
 
-                </td>
+                          <button
+                            onClick={() =>
+                              deleteTask(task.id)
+                            }
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
 
-                <td className="py-3 text-center text-sm">
+                    </div>
 
-  {task.assigned_to_name ?? "-"}
+                  </td>
 
-</td>
-
-                <td className="py-3 text-center text-sm">
-                  {task.due_date}
-                </td>
-
-                <td className="py-3 text-center">
-
-                  <div className="flex justify-center gap-2">
-
-{isManager && (
-
-<>
-  <button
-    onClick={() => {
-      setEditingTask(task);
-      setOpenModal(true);
-    }}
-    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition"
-  >
-    <Pencil size={15} />
-    Edit
-  </button>
-
-  <button
-    onClick={() =>
-      deleteTask(task.id)
-    }
-    className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition"
-  >
-    <Trash2 size={16} />
-  </button>
-</>
-
-)}
-
-</div>
-
-                </td>
-
-              </tr>
-
-            ))}
+                </tr>
+              )
+            )}
 
           </tbody>
-
         </table>
-                {/* Empty State */}
+
+        {/* Empty State */}
 
         {filteredTasks.length === 0 && (
-
           <div className="py-12 flex flex-col items-center justify-center">
 
             <div className="text-5xl mb-3">
@@ -490,7 +455,6 @@ setTimeout(async () => {
             </p>
 
           </div>
-
         )}
 
         {/* Footer */}
@@ -498,7 +462,6 @@ setTimeout(async () => {
         <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 bg-gray-50">
 
           <p className="text-sm text-gray-500">
-
             Showing
 
             <span className="mx-1 font-semibold text-gray-700">
@@ -506,26 +469,19 @@ setTimeout(async () => {
             </span>
 
             task(s)
-
           </p>
 
-
           <Pagination
-  currentPage={1}
-  totalPages={1}
-  onPageChange={() => {}}
-/>
-
-          
+            currentPage={1}
+            totalPages={1}
+            onPageChange={() => {}}
+          />
 
         </div>
 
       </div>
-
     </>
-
   );
-
 };
 
 export default TaskTable;
