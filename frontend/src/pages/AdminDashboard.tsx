@@ -18,7 +18,20 @@ type Employee = {
   email: string;
   phone: string;
   role: "ADMIN" | "MANAGER" | "TEAM_MEMBER";
+  user_id?: number;
   projects?: number;
+};
+
+type Project = {
+  id: number;
+  project_name: string;
+  status: string;
+  created_by: number;
+};
+
+type ProjectAssignment = {
+  project_id: number;
+  employee_id: number;
 };
 
 const AdminDashboard = () => {
@@ -32,81 +45,205 @@ const AdminDashboard = () => {
   }, []);
 
   const loadDashboard = async (): Promise<void> => {
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    // Employees
-    const employeeResponse = await api.get("/employees", {
-      headers: {
+      const headers = {
         Authorization: `Bearer ${token}`,
-      },
-    });
+      };
 
-    const employeeData: Employee[] = employeeResponse.data;
-
-    // Projects
-    const projectResponse = await api.get("/projects", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    // Assignments
-    const assignmentResponse = await api.get(
-      "/project-employees/all",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const assignments = assignmentResponse.data;
-
-    const projectMap = new Map<number, number>();
-
-    assignments.forEach((item: any) => {
-      projectMap.set(
-        item.employee_id,
-        (projectMap.get(item.employee_id) ?? 0) + 1
+      // Employees
+      const employeeResponse = await api.get(
+        "/employees",
+        {
+          headers,
+        }
       );
-    });
 
-    const updatedEmployees = employeeData.map((employee) => ({
-      ...employee,
-      projects: projectMap.get(employee.id) ?? 0,
-    }));
+      const employeeData: Employee[] =
+        employeeResponse.data;
 
-    setEmployees(updatedEmployees);
+      // Projects
+      const projectResponse = await api.get(
+        "/projects",
+        {
+          headers,
+        }
+      );
 
-    setProjectCount(projectResponse.data.length);
+      const projects: Project[] =
+        projectResponse.data;
 
-    const uniqueEmployees = new Set<number>();
+      // Assignments
+      const assignmentResponse =
+        await api.get(
+          "/project-employees/all",
+          {
+            headers,
+          }
+        );
 
-    assignments.forEach((item: any) => {
-      uniqueEmployees.add(item.employee_id);
-    });
+      const assignments: ProjectAssignment[] =
+        assignmentResponse.data;
 
-    const assigned = uniqueEmployees.size;
+      /*
+       * Only projects that are currently active
+       * should count toward an employee's Projects.
+       *
+       * Completed projects are excluded.
+       */
+      const activeProjects = projects.filter(
+        (project) =>
+          project.status !== "Completed"
+      );
 
-    setAssignedEmployees(assigned);
+      const activeProjectIds = new Set(
+        activeProjects.map(
+          (project) => project.id
+        )
+      );
 
-    setAvailableEmployees(
-      Math.max(0, employeeData.length - assigned)
-    );
-  } catch (error) {
-    console.error(error);
-  }
-};
+      /*
+       * Team Member project counts.
+       *
+       * Only count assignments where the project
+       * is currently active.
+       */
+      const projectMap = new Map<
+        number,
+        number
+      >();
 
-const refreshEmployees = async (): Promise<void> => {
-  await loadDashboard();
-};
+      assignments.forEach((item) => {
+        if (
+          activeProjectIds.has(
+            Number(item.project_id)
+          )
+        ) {
+          projectMap.set(
+            item.employee_id,
+            (projectMap.get(
+              item.employee_id
+            ) ?? 0) + 1
+          );
+        }
+      });
 
-const refreshDashboard = async (): Promise<void> => {
-  await loadDashboard();
-};
+      /*
+       * Manager project counts.
+       *
+       * A manager's active projects are the
+       * projects created by that manager which
+       * have not been completed.
+       */
+      const managerProjectMap = new Map<
+        number,
+        number
+      >();
 
+      activeProjects.forEach((project) => {
+        managerProjectMap.set(
+          project.created_by,
+          (managerProjectMap.get(
+            project.created_by
+          ) ?? 0) + 1
+        );
+      });
+
+      const updatedEmployees =
+        employeeData.map((employee) => {
+          let activeProjectCount = 0;
+
+          if (employee.role === "MANAGER") {
+            activeProjectCount =
+              managerProjectMap.get(
+                employee.user_id ?? 0
+              ) ?? 0;
+          } else if (
+            employee.role === "TEAM_MEMBER"
+          ) {
+            activeProjectCount =
+              projectMap.get(
+                employee.id
+              ) ?? 0;
+          }
+
+          return {
+            ...employee,
+            projects: activeProjectCount,
+          };
+        });
+
+      setEmployees(updatedEmployees);
+
+      setProjectCount(
+        projects.length
+      );
+
+      /*
+       * Employees are considered assigned only
+       * when they currently have at least one
+       * active project.
+       */
+      const activeAssignedEmployeeIds =
+        new Set<number>();
+
+      assignments.forEach((item) => {
+        if (
+          activeProjectIds.has(
+            Number(item.project_id)
+          )
+        ) {
+          activeAssignedEmployeeIds.add(
+            item.employee_id
+          );
+        }
+      });
+
+      /*
+       * Managers with active projects are also
+       * considered assigned.
+       */
+      employeeData.forEach((employee) => {
+        if (
+          employee.role === "MANAGER" &&
+          (managerProjectMap.get(
+            employee.user_id ?? 0
+          ) ?? 0) > 0
+        ) {
+          activeAssignedEmployeeIds.add(
+            employee.id
+          );
+        }
+      });
+
+      const assigned =
+        activeAssignedEmployeeIds.size;
+
+      setAssignedEmployees(
+        assigned
+      );
+
+      setAvailableEmployees(
+        Math.max(
+          0,
+          employeeData.length - assigned
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const refreshEmployees =
+    async (): Promise<void> => {
+      await loadDashboard();
+    };
+
+  const refreshDashboard =
+    async (): Promise<void> => {
+      await loadDashboard();
+    };
 
   return (
     <Layout>
@@ -140,7 +277,7 @@ const refreshDashboard = async (): Promise<void> => {
         <SummaryCard
           title="Assigned"
           value={assignedEmployees}
-          subtitle="Assigned Employees"
+          subtitle="Currently Assigned"
           icon={
             <UserCheck
               size={28}
@@ -153,7 +290,7 @@ const refreshDashboard = async (): Promise<void> => {
         <SummaryCard
           title="Available"
           value={availableEmployees}
-          subtitle="Unassigned Employees"
+          subtitle="No Active Projects"
           icon={
             <UserX
               size={28}
@@ -165,10 +302,14 @@ const refreshDashboard = async (): Promise<void> => {
       </div>
 
       <EmployeeTable
-  employees={employees}
-  refreshEmployees={refreshEmployees}
-  refreshDashboard={refreshDashboard}
-/>
+        employees={employees}
+        refreshEmployees={
+          refreshEmployees
+        }
+        refreshDashboard={
+          refreshDashboard
+        }
+      />
     </Layout>
   );
 };

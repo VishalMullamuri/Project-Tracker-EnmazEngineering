@@ -17,9 +17,9 @@ import {
   FileText,
   Filter,
   Hourglass,
-  MoreVertical,
   Pencil,
   Search,
+  Trash2,
 } from "lucide-react";
 
 type TaskStatus =
@@ -63,10 +63,6 @@ const statusOptions: TaskStatus[] = [
   "Completed",
   "Delayed",
 ];
-
-/*
- * Same visual style as the main Dashboard StatusBadge.
- */
 
 const getStatusStyle = (status: TaskStatus) => {
   switch (status) {
@@ -115,9 +111,6 @@ const getAvatarStyle = (name: string) => {
   return styles[index];
 };
 
-/*
- * Returns Monday of the current week.
- */
 const getCurrentMonday = () => {
   const today = new Date();
 
@@ -137,11 +130,6 @@ const getCurrentMonday = () => {
   return monday;
 };
 
-/*
- * Converts Date -> YYYY-MM-DD.
- *
- * This is the format expected by the backend.
- */
 const formatDateForApi = (date: Date) => {
   const year = date.getFullYear();
 
@@ -161,10 +149,6 @@ const WeeklyPlanner = () => {
     localStorage.getItem("user") || "{}"
   );
 
-  /*
-   * ADMIN and MANAGER intentionally have
-   * exactly the same Weekly Planner permissions.
-   */
   const isManager =
     user.role === "MANAGER" ||
     user.role === "ADMIN";
@@ -192,9 +176,6 @@ const WeeklyPlanner = () => {
   const [editingTask, setEditingTask] =
     useState<PlannerTask | null>(null);
 
-  const [openMenu, setOpenMenu] =
-    useState<number | null>(null);
-
   const [loading, setLoading] =
     useState(true);
 
@@ -206,6 +187,9 @@ const WeeklyPlanner = () => {
 
   const [error, setError] =
     useState("");
+
+  const [selectedTaskIds, setSelectedTaskIds] =
+    useState<number[]>([]);
 
   const [newTask, setNewTask] =
     useState<PlannerForm>({
@@ -261,6 +245,7 @@ const WeeklyPlanner = () => {
       previousWeek.getDate() - 7
     );
 
+    setSelectedTaskIds([]);
     setCurrentWeekStart(
       previousWeek
     );
@@ -274,12 +259,14 @@ const WeeklyPlanner = () => {
       nextWeek.getDate() + 7
     );
 
+    setSelectedTaskIds([]);
     setCurrentWeekStart(
       nextWeek
     );
   };
 
   const goToCurrentWeek = () => {
+    setSelectedTaskIds([]);
     setCurrentWeekStart(
       getCurrentMonday()
     );
@@ -289,10 +276,6 @@ const WeeklyPlanner = () => {
    * =========================================================
    * LOAD EMPLOYEES
    * =========================================================
-   *
-   * Employees come from the backend.
-   *
-   * No hardcoded employee names.
    */
 
   const fetchEmployees = useCallback(
@@ -305,13 +288,6 @@ const WeeklyPlanner = () => {
             "/employees"
           );
 
-        /*
-         * Weekly Planner should only allow
-         * TEAM_MEMBER employees to be assigned.
-         *
-         * This also matches the backend's
-         * _get_employee() validation.
-         */
         const teamMembers =
           response.data.filter(
             (employee) =>
@@ -386,20 +362,12 @@ const WeeklyPlanner = () => {
     [weekStartApi]
   );
 
-  /*
-   * Load employees once.
-   */
-
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
 
-  /*
-   * Load planner whenever
-   * the selected week changes.
-   */
-
   useEffect(() => {
+    setSelectedTaskIds([]);
     fetchTasks();
   }, [fetchTasks]);
 
@@ -488,6 +456,170 @@ const WeeklyPlanner = () => {
 
   /*
    * =========================================================
+   * TASK SELECTION
+   * =========================================================
+   */
+
+  const toggleTaskSelection = (
+    taskId: number
+  ) => {
+    setSelectedTaskIds(
+      (previous) =>
+        previous.includes(taskId)
+          ? previous.filter(
+              (id) => id !== taskId
+            )
+          : [
+              ...previous,
+              taskId,
+            ]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds =
+      filteredTasks.map(
+        (task) => task.id
+      );
+
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every(
+        (id) =>
+          selectedTaskIds.includes(
+            id
+          )
+      );
+
+    if (allSelected) {
+      setSelectedTaskIds(
+        (previous) =>
+          previous.filter(
+            (id) =>
+              !visibleIds.includes(
+                id
+              )
+          )
+      );
+
+      return;
+    }
+
+    setSelectedTaskIds(
+      (previous) => [
+        ...new Set([
+          ...previous,
+          ...visibleIds,
+        ]),
+      ]
+    );
+  };
+
+  const allVisibleTasksSelected =
+    filteredTasks.length > 0 &&
+    filteredTasks.every(
+      (task) =>
+        selectedTaskIds.includes(
+          task.id
+        )
+    );
+
+  /*
+   * =========================================================
+   * MOVE SELECTED TASKS TO NEXT WEEK
+   * =========================================================
+   */
+
+  const handleMoveToNextWeek =
+  async () => {
+    if (
+      selectedTaskIds.length ===
+      0
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Copy ${selectedTaskIds.length} selected task(s) to next week?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const nextWeek =
+        new Date(
+          currentWeekStart
+        );
+
+      nextWeek.setDate(
+        nextWeek.getDate() + 7
+      );
+
+      const nextWeekStart =
+        formatDateForApi(
+          nextWeek
+        );
+
+      const selectedTasks =
+        tasks.filter((task) =>
+          selectedTaskIds.includes(
+            task.id
+          )
+        );
+
+      await Promise.all(
+        selectedTasks.map(
+          (task) =>
+            api.post(
+              "/weekly-planner",
+              {
+                task: task.task,
+                employee_id:
+                  task.employee_id,
+                week_start:
+                  nextWeekStart,
+                status:
+                  task.status,
+                remarks:
+                  task.remarks || null,
+              }
+            )
+        )
+      );
+
+      setSelectedTaskIds([]);
+
+      /*
+       * Reload the current week.
+       *
+       * Original tasks remain here because
+       * we created copies instead of updating
+       * their week_start.
+       */
+      await fetchTasks();
+    } catch (err: any) {
+      console.error(
+        "Failed to copy weekly planner tasks:",
+        err
+      );
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to copy selected tasks."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+   * =========================================================
    * FORM
    * =========================================================
    */
@@ -551,9 +683,6 @@ const WeeklyPlanner = () => {
       resetForm();
       setOpenModal(false);
 
-      /*
-       * Reload real data from backend.
-       */
       await fetchTasks();
     } catch (err: any) {
       console.error(
@@ -605,12 +734,6 @@ const WeeklyPlanner = () => {
             employee_id:
               editingTask.employee_id,
 
-            /*
-             * Keep the task in the
-             * currently selected week
-             * unless the backend data
-             * says otherwise.
-             */
             week_start:
               editingTask.week_start,
 
@@ -625,9 +748,6 @@ const WeeklyPlanner = () => {
 
         setEditingTask(null);
 
-        /*
-         * Reload real data.
-         */
         await fetchTasks();
       } catch (err: any) {
         console.error(
@@ -671,11 +791,13 @@ const WeeklyPlanner = () => {
           `/weekly-planner/${taskId}`
         );
 
-        setOpenMenu(null);
+        setSelectedTaskIds(
+          (previous) =>
+            previous.filter(
+              (id) => id !== taskId
+            )
+        );
 
-        /*
-         * Reload real data.
-         */
         await fetchTasks();
       } catch (err: any) {
         console.error(
@@ -705,7 +827,6 @@ const WeeklyPlanner = () => {
       ...task,
     });
 
-    setOpenMenu(null);
     setError("");
   };
 
@@ -842,7 +963,6 @@ const WeeklyPlanner = () => {
 
       </div>
 
-
       {/* =====================================================
           ERROR MESSAGE
       ====================================================== */}
@@ -885,7 +1005,6 @@ const WeeklyPlanner = () => {
         </div>
 
       )}
-
 
       {/* =====================================================
           SUMMARY CARDS
@@ -939,7 +1058,6 @@ const WeeklyPlanner = () => {
 
         </div>
 
-
         {/* DELAYED */}
 
         <div
@@ -986,7 +1104,6 @@ const WeeklyPlanner = () => {
 
         </div>
 
-
         {/* IN PROGRESS */}
 
         <div
@@ -1032,7 +1149,6 @@ const WeeklyPlanner = () => {
           </p>
 
         </div>
-
 
         {/* COMPLETED */}
 
@@ -1081,7 +1197,6 @@ const WeeklyPlanner = () => {
         </div>
 
       </div>
-
 
       {/* =====================================================
           TASK TABLE CONTAINER
@@ -1134,7 +1249,6 @@ const WeeklyPlanner = () => {
             />
 
           </div>
-
 
           {/* RIGHT CONTROLS */}
 
@@ -1200,6 +1314,39 @@ const WeeklyPlanner = () => {
 
             </div>
 
+            {/* MOVE SELECTED TASKS */}
+
+            {isManager &&
+              selectedTaskIds.length >
+                0 && (
+
+                <button
+                  onClick={
+                    handleMoveToNextWeek
+                  }
+                  disabled={saving}
+                  className="
+                    px-4
+                    py-2
+                    text-sm
+                    font-medium
+                    border
+                    border-blue-600
+                    text-blue-600
+                    bg-white
+                    rounded-lg
+                    hover:bg-blue-50
+                    transition
+                    disabled:opacity-50
+                    disabled:cursor-not-allowed
+                  "
+                >
+                  Move to Next Week (
+                  {selectedTaskIds.length}
+                  )
+                </button>
+
+              )}
 
             {/* ADD TASK */}
 
@@ -1237,18 +1384,52 @@ const WeeklyPlanner = () => {
 
         </div>
 
-
         {/* ===================================================
             TABLE
         ==================================================== */}
 
         <div className="w-full overflow-x-auto">
 
-          <table className="w-full min-w-[1000px] table-fixed">
+          <table className="w-full min-w-[1100px] table-fixed">
 
             <thead className="bg-gray-50">
 
               <tr className="text-sm text-gray-600">
+
+                {isManager && (
+
+                  <th
+                    className="
+                      py-3
+                      px-5
+                      text-center
+                      w-16
+                      font-semibold
+                    "
+                  >
+                    <input
+                      type="checkbox"
+                      checked={
+                        allVisibleTasksSelected
+                      }
+                      onChange={
+                        toggleSelectAll
+                      }
+                      disabled={
+                        filteredTasks.length ===
+                          0 ||
+                        saving
+                      }
+                      className="
+                        w-4
+                        h-4
+                        cursor-pointer
+                      "
+                      title="Select all"
+                    />
+                  </th>
+
+                )}
 
                 <th
                   className="
@@ -1330,7 +1511,6 @@ const WeeklyPlanner = () => {
 
             </thead>
 
-
             <tbody>
 
               {loading ? (
@@ -1340,7 +1520,7 @@ const WeeklyPlanner = () => {
                   <td
                     colSpan={
                       isManager
-                        ? 6
+                        ? 7
                         : 5
                     }
                     className="
@@ -1371,6 +1551,40 @@ const WeeklyPlanner = () => {
                       "
                     >
 
+                      {/* SELECT */}
+
+                      {isManager && (
+
+                        <td
+                          className="
+                            py-3
+                            px-5
+                            text-center
+                          "
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTaskIds.includes(
+                              task.id
+                            )}
+                            onChange={() =>
+                              toggleTaskSelection(
+                                task.id
+                              )
+                            }
+                            disabled={
+                              saving
+                            }
+                            className="
+                              w-4
+                              h-4
+                              cursor-pointer
+                            "
+                          />
+                        </td>
+
+                      )}
+
                       {/* NUMBER */}
 
                       <td
@@ -1386,7 +1600,6 @@ const WeeklyPlanner = () => {
                         {index + 1}
                       </td>
 
-
                       {/* TASK */}
 
                       <td
@@ -1400,7 +1613,6 @@ const WeeklyPlanner = () => {
                       >
                         {task.task}
                       </td>
-
 
                       {/* EMPLOYEE */}
 
@@ -1450,7 +1662,6 @@ const WeeklyPlanner = () => {
 
                       </td>
 
-
                       {/* STATUS */}
 
                       <td
@@ -1482,7 +1693,6 @@ const WeeklyPlanner = () => {
 
                       </td>
 
-
                       {/* REMARKS */}
 
                       <td
@@ -1504,7 +1714,6 @@ const WeeklyPlanner = () => {
                         </span>
 
                       </td>
-
 
                       {/* ACTION */}
 
@@ -1554,108 +1763,34 @@ const WeeklyPlanner = () => {
                               <Pencil size={16} />
                             </button>
 
+                            {/* DELETE */}
 
-                            {/* MORE */}
-
-                            <div className="relative">
-
-                              <button
-                                onClick={() =>
-                                  setOpenMenu(
-                                    openMenu ===
-                                      task.id
-                                      ? null
-                                      : task.id
-                                  )
-                                }
-                                disabled={saving}
-                                className="
-                                  w-9
-                                  h-9
-                                  rounded-lg
-                                  border
-                                  border-gray-300
-                                  bg-white
-                                  text-gray-600
-                                  flex
-                                  items-center
-                                  justify-center
-                                  hover:bg-gray-100
-                                  transition
-                                  disabled:opacity-50
-                                "
-                                title="More"
-                              >
-                                <MoreVertical
-                                  size={16}
-                                />
-                              </button>
-
-
-                              {openMenu ===
-                                task.id && (
-
-                                <div
-                                  className="
-                                    absolute
-                                    right-0
-                                    top-10
-                                    z-30
-                                    w-32
-                                    bg-white
-                                    border
-                                    border-gray-200
-                                    rounded-lg
-                                    shadow-lg
-                                    p-1
-                                  "
-                                >
-
-                                  <button
-                                    onClick={() =>
-                                      openEditModal(
-                                        task
-                                      )
-                                    }
-                                    className="
-                                      w-full
-                                      text-left
-                                      px-3
-                                      py-2
-                                      text-sm
-                                      text-gray-700
-                                      rounded-md
-                                      hover:bg-gray-100
-                                    "
-                                  >
-                                    Edit
-                                  </button>
-
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteTask(
-                                        task.id
-                                      )
-                                    }
-                                    className="
-                                      w-full
-                                      text-left
-                                      px-3
-                                      py-2
-                                      text-sm
-                                      text-red-600
-                                      rounded-md
-                                      hover:bg-red-50
-                                    "
-                                  >
-                                    Delete
-                                  </button>
-
-                                </div>
-
-                              )}
-
-                            </div>
+                            <button
+                              onClick={() =>
+                                handleDeleteTask(
+                                  task.id
+                                )
+                              }
+                              disabled={saving}
+                              className="
+                                w-9
+                                h-9
+                                rounded-lg
+                                border
+                                border-gray-300
+                                bg-white
+                                text-red-600
+                                flex
+                                items-center
+                                justify-center
+                                hover:bg-red-50
+                                transition
+                                disabled:opacity-50
+                              "
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
 
                           </div>
 
@@ -1675,7 +1810,6 @@ const WeeklyPlanner = () => {
           </table>
 
         </div>
-
 
         {/* ===================================================
             EMPTY STATE
@@ -1721,7 +1855,6 @@ const WeeklyPlanner = () => {
 
           )}
 
-
         {/* ===================================================
             FOOTER
         ==================================================== */}
@@ -1756,7 +1889,6 @@ const WeeklyPlanner = () => {
         </div>
 
       </div>
-
 
       {/* =====================================================
           ADD TASK MODAL
@@ -1802,7 +1934,6 @@ const WeeklyPlanner = () => {
 
             </div>
 
-
             <div className="p-5 space-y-5">
 
               {/* TASK */}
@@ -1845,7 +1976,6 @@ const WeeklyPlanner = () => {
                 />
 
               </div>
-
 
               {/* EMPLOYEE */}
 
@@ -1914,7 +2044,6 @@ const WeeklyPlanner = () => {
 
               </div>
 
-
               {/* STATUS */}
 
               <div>
@@ -1971,7 +2100,6 @@ const WeeklyPlanner = () => {
 
               </div>
 
-
               {/* REMARKS */}
 
               <div>
@@ -2017,7 +2145,6 @@ const WeeklyPlanner = () => {
               </div>
 
             </div>
-
 
             <div className="
               flex
@@ -2085,7 +2212,6 @@ const WeeklyPlanner = () => {
 
       )}
 
-
       {/* =====================================================
           EDIT TASK MODAL
       ====================================================== */}
@@ -2130,7 +2256,6 @@ const WeeklyPlanner = () => {
 
             </div>
 
-
             <div className="p-5 space-y-5">
 
               {/* TASK */}
@@ -2174,7 +2299,6 @@ const WeeklyPlanner = () => {
                 />
 
               </div>
-
 
               {/* EMPLOYEE */}
 
@@ -2240,7 +2364,6 @@ const WeeklyPlanner = () => {
 
               </div>
 
-
               {/* STATUS */}
 
               <div>
@@ -2297,7 +2420,6 @@ const WeeklyPlanner = () => {
 
               </div>
 
-
               {/* REMARKS */}
 
               <div>
@@ -2343,7 +2465,6 @@ const WeeklyPlanner = () => {
               </div>
 
             </div>
-
 
             <div className="
               flex

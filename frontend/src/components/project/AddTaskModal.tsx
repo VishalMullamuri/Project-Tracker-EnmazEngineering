@@ -110,10 +110,6 @@ const AddTaskModal = ({
       return;
     }
 
-    if (!description.trim()) {
-      alert("Task description is required.");
-      return;
-    }
 
     if (!isTeamMember && assignedTo === 0) {
       alert("Please select a team member.");
@@ -166,6 +162,7 @@ const AddTaskModal = ({
             assigned_to: assignedToUserId,
             title,
             description,
+            status,
             priority,
             start_date: startDate,
             due_date: dueDate,

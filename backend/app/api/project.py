@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from sqlalchemy.orm import Session
 
@@ -33,20 +34,19 @@ router = APIRouter(
 # ------------------------------------
 
 
-@router.post(
-    "",
-    response_model=ProjectResponse,
-)
+@router.post("", response_model=ProjectResponse)
 def create_new_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    return create_project(
-        db,
-        project,
-        current_user.id,
-    )
+    try:
+        return create_project(db, project, current_user.id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 # ------------------------------------

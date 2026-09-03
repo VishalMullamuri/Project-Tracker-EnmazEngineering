@@ -203,7 +203,7 @@ const EmployeeTable = ({
               </th>
 
               <th className="py-3 text-center w-44 font-semibold">
-                Projects
+                Active Projects
               </th>
 
               <th className="py-3 text-center w-28 font-semibold">

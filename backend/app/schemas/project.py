@@ -15,6 +15,7 @@ class ProjectCreate(BaseModel):
     description: str = Field(min_length=1)
     start_date: date
     end_date: date
+    employee_ids: list[int] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_dates(self):

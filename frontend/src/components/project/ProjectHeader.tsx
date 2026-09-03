@@ -144,7 +144,7 @@ const isManager =
         transition
       "
     >
-      Add Team Members
+      + Add Team Members
     </button>
 
     <button

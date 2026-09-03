@@ -25,7 +25,8 @@ const SummaryCard = ({
         shadow-sm
         hover:shadow-md
         transition
-        p-5
+        px-4
+        py-3
       "
     >
       {/* Top */}
@@ -34,12 +35,12 @@ const SummaryCard = ({
 
         <div>
 
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-xs text-gray-500 font-medium">
             {title}
           </p>
 
           <h2
-            className={`text-4xl font-bold mt-2 ${valueColor}`}
+            className={`text-3xl font-bold mt-1 ${valueColor}`}
           >
             {value}
           </h2>
@@ -48,9 +49,9 @@ const SummaryCard = ({
 
         <div
           className={`
-            w-14
-            h-14
-            rounded-xl
+            w-10
+            h-10
+            rounded-lg
             flex
             items-center
             justify-center
@@ -64,7 +65,7 @@ const SummaryCard = ({
 
       {/* Bottom */}
 
-      <p className="text-sm text-gray-400 mt-5">
+      <p className="text-xs text-gray-400 mt-2">
         {subtitle}
       </p>
 

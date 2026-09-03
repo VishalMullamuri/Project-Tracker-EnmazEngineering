@@ -98,11 +98,54 @@ def create_project(
     )
 
     db.add(new_project)
+    db.flush()
+
+    unique_employee_ids = set(project.employee_ids)
+
+    for employee_id in unique_employee_ids:
+        employee = (
+            db.query(Employee)
+            .filter(
+                Employee.id == employee_id,
+                Employee.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not employee:
+            db.rollback()
+            raise ValueError("Employee not found")
+
+        user = (
+            db.query(User)
+            .filter(
+                User.id == employee.user_id,
+                User.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not user:
+            db.rollback()
+            raise ValueError("Employee not found")
+
+        if user.role != UserRole.TEAM_MEMBER:
+            db.rollback()
+            raise ValueError(
+                "Only team members can be assigned to projects"
+            )
+
+        assignment = ProjectEmployee(
+            project_id=new_project.id,
+            employee_id=employee_id,
+        )
+
+        db.add(assignment)
+
     db.commit()
     db.refresh(new_project)
 
     return new_project
-
 
 def get_project_status(
     project: Project,
@@ -178,6 +221,13 @@ def get_all_projects(
             project,
             tasks_by_project[project.id],
         )
+
+    projects.sort(
+        key=lambda project: (
+            project.status == "Completed",
+            project.end_date,
+        )
+    )
 
     return projects
 

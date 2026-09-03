@@ -75,12 +75,11 @@ def assign(
         .filter(
             User.id == employee.user_id,
             User.is_active.is_(True),
-            User.role == UserRole.TEAM_MEMBER,
         )
         .first()
     )
 
-    if not user:
+    if not user or user.role != UserRole.TEAM_MEMBER:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found",

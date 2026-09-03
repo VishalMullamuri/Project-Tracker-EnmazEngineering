@@ -26,7 +26,8 @@ class TaskCreate(BaseModel):
     project_id: int
     assigned_to: int
     title: str
-    description: str
+    description: str | None = None
+    status: TaskStatus = TaskStatus.NOT_STARTED
     priority: TaskPriority
     start_date: date
     due_date: date
@@ -37,7 +38,6 @@ class TaskCreate(BaseModel):
             "project_id",
             "assigned_to",
             "title",
-            "description",
             "priority",
             "start_date",
             "due_date",
