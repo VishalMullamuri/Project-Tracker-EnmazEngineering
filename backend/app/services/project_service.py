@@ -102,42 +102,28 @@ def create_project(
 
     unique_employee_ids = set(project.employee_ids)
 
-    for employee_id in unique_employee_ids:
-        employee = (
-            db.query(Employee)
-            .filter(
-                Employee.id == employee_id,
-                Employee.is_active.is_(True),
-            )
-            .first()
+    employees = (
+        db.query(Employee)
+        .join(User, User.id == Employee.user_id)
+        .filter(
+            Employee.id.in_(unique_employee_ids),
+            Employee.is_active.is_(True),
+            User.is_active.is_(True),
+            User.role == UserRole.TEAM_MEMBER,
+        )
+        .all()
+    )
+
+    if len(employees) != len(unique_employee_ids):
+        db.rollback()
+        raise ValueError(
+            "Only team members can be assigned to projects"
         )
 
-        if not employee:
-            db.rollback()
-            raise ValueError("Employee not found")
-
-        user = (
-            db.query(User)
-            .filter(
-                User.id == employee.user_id,
-                User.is_active.is_(True),
-            )
-            .first()
-        )
-
-        if not user:
-            db.rollback()
-            raise ValueError("Employee not found")
-
-        if user.role != UserRole.TEAM_MEMBER:
-            db.rollback()
-            raise ValueError(
-                "Only team members can be assigned to projects"
-            )
-
+    for employee in employees:
         assignment = ProjectEmployee(
             project_id=new_project.id,
-            employee_id=employee_id,
+            employee_id=employee.id,
         )
 
         db.add(assignment)
@@ -147,10 +133,11 @@ def create_project(
 
     return new_project
 
+
 def get_project_status(
     project: Project,
     tasks: list[Task],
-) -> str:
+):
     if not tasks:
         return "Not Started"
 
@@ -161,6 +148,9 @@ def get_project_status(
         return "Delayed"
 
     if any(task.status == "In Progress" for task in tasks):
+        return "In Progress"
+
+    if project.progress > 0:
         return "In Progress"
 
     return "Not Started"

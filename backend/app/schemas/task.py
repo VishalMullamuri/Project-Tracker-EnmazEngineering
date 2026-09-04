@@ -27,13 +27,12 @@ class TaskCreate(BaseModel):
     assigned_to: int
     title: str
     description: str | None = None
-    status: TaskStatus = TaskStatus.NOT_STARTED
     priority: TaskPriority
     start_date: date
     due_date: date
 
     @model_validator(mode="after")
-    def validate_nulls(self):
+    def validate_task_dates(self):
         for field in (
             "project_id",
             "assigned_to",
@@ -44,6 +43,11 @@ class TaskCreate(BaseModel):
         ):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
+
+        if self.due_date < self.start_date:
+            raise ValueError(
+                "Due date cannot be earlier than the start date"
+            )
 
         return self
 
@@ -61,7 +65,7 @@ class TaskUpdate(BaseModel):
     due_date: date | None = None
 
     @model_validator(mode="after")
-    def validate_nulls(self):
+    def validate_task_dates(self):
         for field in (
             "assigned_to",
             "title",
@@ -73,6 +77,15 @@ class TaskUpdate(BaseModel):
         ):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
+
+        if (
+            self.start_date is not None
+            and self.due_date is not None
+            and self.due_date < self.start_date
+        ):
+            raise ValueError(
+                "Due date cannot be earlier than the start date"
+            )
 
         return self
 

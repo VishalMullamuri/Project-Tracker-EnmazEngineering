@@ -51,11 +51,11 @@ const AddTaskModal = ({
     useState(0);
 
   const [status, setStatus] =
-  useState<
-    | "Not Started"
-    | "In Progress"
-    | "Completed"
-  >("Not Started");
+    useState<
+      | "Not Started"
+      | "In Progress"
+      | "Completed"
+    >("Not Started");
 
   const [priority, setPriority] =
     useState<
@@ -110,7 +110,6 @@ const AddTaskModal = ({
       return;
     }
 
-
     if (!isTeamMember && assignedTo === 0) {
       alert("Please select a team member.");
       return;
@@ -128,6 +127,13 @@ const AddTaskModal = ({
 
     if (!dueDate) {
       alert("Please select a due date.");
+      return;
+    }
+
+    if (dueDate < startDate) {
+      alert(
+        "Due date cannot be earlier than the start date."
+      );
       return;
     }
 
@@ -162,7 +168,6 @@ const AddTaskModal = ({
             assigned_to: assignedToUserId,
             title,
             description,
-            status,
             priority,
             start_date: startDate,
             due_date: dueDate,
@@ -270,39 +275,6 @@ const AddTaskModal = ({
               </div>
             )}
 
-            {/* Status */}
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Status
-              </label>
-
-              <select
-                value={status}
-                onChange={(e) =>
-                  setStatus(
-                    e.target.value as
-                      | "Not Started"
-                      | "In Progress"
-                      | "Completed"
-                  )
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="Not Started">
-                  Not Started
-                </option>
-
-                <option value="In Progress">
-                  In Progress
-                </option>
-
-                <option value="Completed">
-                  Completed
-                </option>
-              </select>
-            </div>
-
             {/* Priority */}
 
             <div>
@@ -336,6 +308,41 @@ const AddTaskModal = ({
               </select>
             </div>
 
+            {/* Status - Edit Only */}
+
+            {editingTask && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Status
+                </label>
+
+                <select
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(
+                      e.target.value as
+                        | "Not Started"
+                        | "In Progress"
+                        | "Completed"
+                    )
+                  }
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="Not Started">
+                    Not Started
+                  </option>
+
+                  <option value="In Progress">
+                    In Progress
+                  </option>
+
+                  <option value="Completed">
+                    Completed
+                  </option>
+                </select>
+              </div>
+            )}
+
             {/* Start Date */}
 
             <div>
@@ -363,6 +370,7 @@ const AddTaskModal = ({
               <input
                 type="date"
                 value={dueDate}
+                min={startDate || undefined}
                 onChange={(e) =>
                   setDueDate(e.target.value)
                 }

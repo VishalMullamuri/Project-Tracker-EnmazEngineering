@@ -111,7 +111,7 @@ def create_task(
         priority=task.priority,
         start_date=task.start_date,
         due_date=task.due_date,
-        status=task.status,
+        status="Not Started",
         created_by=current_user.id,
     )
 
