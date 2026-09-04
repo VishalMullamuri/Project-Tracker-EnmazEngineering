@@ -17,6 +17,13 @@ import {
   Pencil,
   Trash2,
   Eye,
+  FolderKanban,
+  ListChecks,
+  Clock3,
+  Loader2,
+  CheckCircle2,
+  Shield,
+  FolderX,
 } from "lucide-react";
 
 type Employee = {
@@ -41,6 +48,42 @@ type Task = {
   status: string;
 };
 
+const AVATAR_PALETTE = [
+  "bg-blue-100 text-blue-700",
+  "bg-purple-100 text-purple-700",
+  "bg-pink-100 text-pink-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-cyan-100 text-cyan-700",
+];
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/);
+  const initials =
+    parts.length === 1
+      ? parts[0].slice(0, 2)
+      : `${parts[0][0]}${parts[parts.length - 1][0]}`;
+  return initials.toUpperCase();
+};
+
+const getAvatarColor = (name: string) => {
+  const hash = name
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+};
+
+const roleLabels: Record<string, string> = {
+  MANAGER: "Manager",
+  TEAM_MEMBER: "Team Member",
+  ADMIN: "Admin",
+};
+
+const statusStyles: Record<string, string> = {
+  Completed: "bg-green-100 text-green-700",
+  Delayed: "bg-red-100 text-red-700",
+};
+
 const EmployeeDetails = () => {
   const navigate = useNavigate();
 
@@ -53,49 +96,27 @@ const EmployeeDetails = () => {
       location.state?.employee ?? null
     );
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [editOpen, setEditOpen] =
-    useState(false);
-
-  const [projects, setProjects] =
-    useState<Project[]>([]);
-
-  const [completedTasks, setCompletedTasks] =
-    useState(0);
-
-  const [assignedTasks, setAssignedTasks] =
-    useState(0);
-
-  const [completionRate, setCompletionRate] =
-    useState(0);
-
-  const [pendingTasks, setPendingTasks] =
-    useState(0);
-
-  const [inProgressTasks, setInProgressTasks] =
-    useState(0);
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [assignedTasks, setAssignedTasks] = useState(0);
+  const [completionRate, setCompletionRate] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const [inProgressTasks, setInProgressTasks] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const projectsPerPage = 3;
 
   const fetchEmployee = async () => {
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      const response =
-        await api.get(
-          `/employees/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+      const response = await api.get(`/employees/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       setEmployee(response.data);
     } catch (error) {
@@ -109,18 +130,13 @@ const EmployeeDetails = () => {
     if (!employee) return;
 
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      const projectResponse =
-        await api.get(
-          "/projects",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+      const projectResponse = await api.get("/projects", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (employee.role === "MANAGER") {
         setProjects(
@@ -130,38 +146,8 @@ const EmployeeDetails = () => {
           )
         );
       } else {
-        const assignments =
-          await api.get(
-            "/project-employees/all",
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-        const employeeProjects =
-          assignments.data
-            .filter(
-              (item: any) =>
-                item.employee_id === employee.id
-            )
-            .map(
-              (item: any) =>
-                item.project_id
-            );
-
-        setProjects(
-          projectResponse.data.filter(
-            (project: Project) =>
-              employeeProjects.includes(project.id)
-          )
-        );
-      }
-
-      const taskResponse =
-        await api.get(
-          "/tasks",
+        const assignments = await api.get(
+          "/project-employees/all",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -169,55 +155,58 @@ const EmployeeDetails = () => {
           }
         );
 
-      const employeeTasks =
-        taskResponse.data.filter(
-          (task: any) =>
-            task.assigned_to ===
-            employee.user_id
-        );
+        const employeeProjects = assignments.data
+          .filter(
+            (item: any) => item.employee_id === employee.id
+          )
+          .map((item: any) => item.project_id);
 
-      setAssignedTasks(
-        employeeTasks.length
+        setProjects(
+          projectResponse.data.filter((project: Project) =>
+            employeeProjects.includes(project.id)
+          )
+        );
+      }
+
+      const taskResponse = await api.get("/tasks", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const employeeTasks = taskResponse.data.filter(
+        (task: any) => task.assigned_to === employee.user_id
       );
+
+      setAssignedTasks(employeeTasks.length);
 
       setCompletedTasks(
         employeeTasks.filter(
-          (task: Task) =>
-            task.status ===
-            "Completed"
+          (task: Task) => task.status === "Completed"
         ).length
       );
 
       setPendingTasks(
         employeeTasks.filter(
-          (task: Task) =>
-            task.status ===
-            "Not Started"
+          (task: Task) => task.status === "Not Started"
         ).length
       );
 
       setInProgressTasks(
         employeeTasks.filter(
-          (task: Task) =>
-            task.status ===
-            "In Progress"
+          (task: Task) => task.status === "In Progress"
         ).length
       );
 
-      const completed =
-        employeeTasks.filter(
-          (task: Task) =>
-            task.status ===
-            "Completed"
-        ).length;
+      const completed = employeeTasks.filter(
+        (task: Task) => task.status === "Completed"
+      ).length;
 
       setCompletionRate(
         employeeTasks.length === 0
           ? 0
           : Math.round(
-              (completed /
-                employeeTasks.length) *
-                100
+              (completed / employeeTasks.length) * 100
             )
       );
     } catch (error) {
@@ -235,18 +224,15 @@ const EmployeeDetails = () => {
     }
   }, [employee]);
 
-  const updateEmployee = async (
-    updatedEmployee: {
-      name: string;
-      email: string;
-      phone: string;
-    }
-  ) => {
+  const updateEmployee = async (updatedEmployee: {
+    name: string;
+    email: string;
+    phone: string;
+  }) => {
     if (!employee) return;
 
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       await api.put(
         `/employees/${employee.id}`,
@@ -264,9 +250,7 @@ const EmployeeDetails = () => {
     } catch (error) {
       console.error(error);
 
-      alert(
-        "Failed to update employee."
-      );
+      alert("Failed to update employee.");
     }
   };
 
@@ -280,17 +264,13 @@ const EmployeeDetails = () => {
     if (!confirmDelete) return;
 
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      await api.delete(
-        `/employees/${employee.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.delete(`/employees/${employee.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       alert("Employee deleted successfully.");
 
@@ -302,31 +282,20 @@ const EmployeeDetails = () => {
     }
   };
 
-  const indexOfLastProject =
-    currentPage * projectsPerPage;
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
 
-  const indexOfFirstProject =
-    indexOfLastProject -
-    projectsPerPage;
+  const currentProjects = projects.slice(
+    indexOfFirstProject,
+    indexOfLastProject
+  );
 
-  const currentProjects =
-    projects.slice(
-      indexOfFirstProject,
-      indexOfLastProject
-    );
-
-  const totalPages =
-    Math.ceil(
-      projects.length /
-        projectsPerPage
-    );
+  const totalPages = Math.ceil(projects.length / projectsPerPage);
 
   if (loading) {
     return (
       <Layout>
-        <div className="p-6">
-          Loading...
-        </div>
+        <div className="p-6 text-sm text-slate-500">Loading...</div>
       </Layout>
     );
   }
@@ -334,9 +303,7 @@ const EmployeeDetails = () => {
   if (!employee) {
     return (
       <Layout>
-        <div className="p-6">
-          Employee not found.
-        </div>
+        <div className="p-6 text-sm text-slate-500">Employee not found.</div>
       </Layout>
     );
   }
@@ -351,214 +318,189 @@ const EmployeeDetails = () => {
     <Layout>
       <EditEmployeeModal
         isOpen={editOpen}
-        onClose={() =>
-          setEditOpen(false)
-        }
+        onClose={() => setEditOpen(false)}
         employee={employee}
-        onUpdateEmployee={
-          updateEmployee
-        }
+        onUpdateEmployee={updateEmployee}
       />
+
+      {/* Breadcrumb */}
 
       <button
         onClick={() => navigate("/admin")}
-        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition mb-5"
+        className="group flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors mb-4"
       >
-        <ArrowLeft size={18} />
-
-        Back to Employees
+        <ArrowLeft
+          size={16}
+          strokeWidth={2}
+          className="group-hover:-translate-x-0.5 transition-transform"
+        />
+        <span className="hover:underline">Employees</span>
+        <span className="text-slate-300">/</span>
+        <span className="font-medium text-slate-700">{employee.name}</span>
       </button>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="w-16 h-16 rounded-xl bg-blue-100 flex items-center justify-center text-3xl mb-4">
-              👤
+      {/* Header Card */}
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-6">
+        <div className="flex justify-between items-start gap-6 flex-wrap">
+
+          <div className="flex items-start gap-4 min-w-0">
+
+            <div
+              className={`w-14 h-14 rounded-xl flex items-center justify-center text-lg font-semibold shrink-0 ${getAvatarColor(
+                employee.name
+              )}`}
+            >
+              {getInitials(employee.name)}
             </div>
 
-            <h1 className="text-3xl font-bold text-slate-800">
-              {employee.name}
-            </h1>
+            <div className="min-w-0">
 
-            <div className="mt-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <Mail
-                  size={18}
-                  className="text-blue-600"
-                />
+              <h1 className="text-2xl font-bold text-slate-900 leading-tight truncate">
+                {employee.name}
+              </h1>
 
-                <span className="text-gray-700">
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                  <Mail size={16} strokeWidth={1.75} className="text-blue-600" />
                   {employee.email}
-                </span>
-              </div>
+                </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-blue-600 font-semibold w-[18px]">
-                  👤
-                </span>
+                <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                  <Shield size={16} strokeWidth={1.75} className="text-blue-600" />
+                  {roleLabels[employee.role] ?? employee.role}
+                </div>
 
-                <span className="text-gray-700">
-                  {employee.role === "MANAGER"
-                    ? "Manager"
-                    : employee.role === "TEAM_MEMBER"
-                      ? "Team Member"
-                      : "Admin"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Phone
-                  size={18}
-                  className="text-blue-600"
-                />
-
-                <span className="text-gray-700">
+                <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                  <Phone size={16} strokeWidth={1.75} className="text-blue-600" />
                   {employee.phone}
-                </span>
+                </div>
               </div>
+
             </div>
+
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+
             <button
               onClick={() =>
-                navigate(
-                  `/employee/${employee.id}/worksheet`
-                )
+                navigate(`/employee/${employee.id}/worksheet`)
               }
-              className="
-                flex
-                items-center
-                gap-2
-                px-4
-                py-2
-                rounded-lg
-                bg-blue-600
-                text-white
-                hover:bg-blue-700
-                transition
-              "
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors"
             >
-              <Eye size={16} />
-
+              <Eye size={15} strokeWidth={2} />
               Worksheet
             </button>
 
             <button
-              onClick={() =>
-                setEditOpen(true)
-              }
-              className="
-                flex
-                items-center
-                gap-2
-                px-4
-                py-2
-                rounded-lg
-                bg-yellow-500
-                text-white
-                hover:bg-yellow-600
-                transition
-              "
+              onClick={() => setEditOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
             >
-              <Pencil size={16} />
-
+              <Pencil size={15} strokeWidth={2} />
               Edit
             </button>
 
             {isAdmin && (
               <button
                 onClick={deleteEmployee}
-                className="
-                  flex
-                  items-center
-                  gap-2
-                  px-4
-                  py-2
-                  rounded-lg
-                  bg-red-600
-                  text-white
-                  hover:bg-red-700
-                  transition
-                "
+                title="Delete employee"
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
               >
-                <Trash2 size={16} />
-                Delete
+                <Trash2 size={16} strokeWidth={2} />
               </button>
             )}
+
           </div>
+
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mt-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
+        {/* Employee Summary */}
+
+        <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-6">
+
+          <h2 className="text-base font-semibold text-slate-900 mb-5">
             Employee Summary
           </h2>
 
-          <div className="space-y-5">
-            <div className="flex justify-between items-center pb-3 border-b">
-              <span className="text-gray-600 font-medium">
-                📁 Assigned Projects
-              </span>
+          <div className="space-y-1">
 
-              <span className="text-xl font-bold text-slate-800">
-                {projects.length}
-              </span>
-            </div>
+            {[
+              {
+                icon: FolderKanban,
+                color: "text-blue-600 bg-blue-50",
+                label: "Assigned Projects",
+                value: projects.length,
+                valueColor: "text-slate-900",
+              },
+              {
+                icon: ListChecks,
+                color: "text-slate-600 bg-slate-100",
+                label: "Assigned Tasks",
+                value: assignedTasks,
+                valueColor: "text-slate-900",
+              },
+              {
+                icon: Clock3,
+                color: "text-orange-500 bg-orange-50",
+                label: "Not Started Tasks",
+                value: pendingTasks,
+                valueColor: "text-orange-500",
+              },
+              {
+                icon: Loader2,
+                color: "text-blue-600 bg-blue-50",
+                label: "In Progress",
+                value: inProgressTasks,
+                valueColor: "text-blue-600",
+              },
+              {
+                icon: CheckCircle2,
+                color: "text-green-600 bg-green-50",
+                label: "Completed Tasks",
+                value: completedTasks,
+                valueColor: "text-green-600",
+              },
+            ].map((row, i) => {
+              const RowIcon = row.icon;
+              return (
+                <div
+                  key={i}
+                  className="flex justify-between items-center py-3 border-b border-slate-100 last:border-b-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${row.color}`}
+                    >
+                      <RowIcon size={16} strokeWidth={1.75} />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">
+                      {row.label}
+                    </span>
+                  </div>
 
-            <div className="flex justify-between items-center pb-3 border-b">
-              <span className="text-gray-600 font-medium">
-                📋 Assigned Tasks
-              </span>
+                  <span className={`text-lg font-bold ${row.valueColor}`}>
+                    {row.value}
+                  </span>
+                </div>
+              );
+            })}
 
-              <span className="text-xl font-bold text-slate-800">
-                {assignedTasks}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center pb-3 border-b">
-              <span className="text-gray-600 font-medium">
-                ⏳ Not Started Tasks
-              </span>
-
-              <span className="text-xl font-bold text-orange-500">
-                {pendingTasks}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center pb-3 border-b">
-              <span className="text-gray-600 font-medium">
-                🚧 In Progress
-              </span>
-
-              <span className="text-xl font-bold text-blue-600">
-                {inProgressTasks}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center pb-5">
-              <span className="text-gray-600 font-medium">
-                ✅ Completed Tasks
-              </span>
-
-              <span className="text-xl font-bold text-green-600">
-                {completedTasks}
-              </span>
-            </div>
-
-            <div>
+            <div className="pt-4">
               <div className="flex justify-between mb-2">
-                <span className="text-gray-600 font-medium">
+                <span className="text-sm font-medium text-slate-600">
                   Completion Rate
                 </span>
 
-                <span className="font-bold text-blue-600">
+                <span className="text-sm font-bold text-blue-600">
                   {completionRate}%
                 </span>
               </div>
 
-              <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className="h-full bg-blue-600 rounded-full transition-all duration-500"
                   style={{
@@ -567,110 +509,67 @@ const EmployeeDetails = () => {
                 />
               </div>
             </div>
+
           </div>
+
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        {/* Assigned Projects */}
+
+        <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-6">
+
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-base font-semibold text-slate-900">
               Assigned Projects
             </h2>
 
-            <span
-              className="
-                px-3
-                py-1
-                rounded-full
-                bg-blue-100
-                text-blue-700
-                text-sm
-                font-semibold
-              "
-            >
+            <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
               {projects.length} Projects
             </span>
           </div>
 
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-              <div className="text-5xl mb-3">
-                📁
-              </div>
+            <div className="flex flex-col items-center justify-center py-14 text-center">
+              <FolderX size={40} strokeWidth={1.5} className="text-slate-300 mb-3" />
 
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 className="text-sm font-semibold text-slate-700">
                 No Projects Assigned
               </h3>
 
-              <p className="text-sm mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 This employee has not been assigned to any project yet.
               </p>
             </div>
           ) : (
             <>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {currentProjects.map((project) => (
                   <div
                     key={project.id}
                     onClick={() => navigate(`/project/${project.id}`)}
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      p-5
-                      rounded-xl
-                      border
-                      border-gray-200
-                      bg-white
-                      hover:shadow-md
-                      hover:border-blue-300
-                      hover:bg-blue-50
-                      transition-all
-                      duration-300
-                      cursor-pointer
-                    "
+                    className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-blue-200 transition-all cursor-pointer"
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="
-                          w-12
-                          h-12
-                          rounded-xl
-                          bg-blue-100
-                          flex
-                          items-center
-                          justify-center
-                          text-xl
-                        "
-                      >
-                        📁
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <FolderKanban size={18} strokeWidth={1.75} className="text-blue-600" />
                       </div>
 
-                      <div>
-                        <h3 className="font-semibold text-slate-800">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-slate-800 truncate">
                           {project.project_name}
                         </h3>
 
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs text-slate-500">
                           Project ID #{project.id}
                         </p>
                       </div>
                     </div>
 
                     <span
-                      className={`
-                        px-3
-                        py-1
-                        rounded-full
-                        text-xs
-                        font-semibold
-                        ${
-                          project.status === "Completed"
-                            ? "bg-green-100 text-green-700"
-                            : project.status === "Delayed"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-blue-100 text-blue-700"
-                        }
-                      `}
+                      className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        statusStyles[project.status] ??
+                        "bg-blue-100 text-blue-700"
+                      }`}
                     >
                       {project.status}
                     </span>
@@ -690,6 +589,7 @@ const EmployeeDetails = () => {
             </>
           )}
         </div>
+
       </div>
     </Layout>
   );

@@ -4,6 +4,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  ClipboardList,
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -21,6 +22,18 @@ type Props = {
   employees: Employee[];
   refreshTasks: () => Promise<void>;
   refreshProject: () => Promise<void>;
+};
+
+const statusStyles: Record<string, string> = {
+  Completed: "bg-green-100 text-green-700",
+  "In Progress": "bg-blue-100 text-blue-700",
+  "Not Started": "bg-orange-100 text-orange-700",
+};
+
+const priorityStyles: Record<string, string> = {
+  High: "bg-red-100 text-red-700",
+  Medium: "bg-yellow-100 text-yellow-700",
+  Low: "bg-green-100 text-green-700",
 };
 
 const TaskTable = ({
@@ -42,40 +55,24 @@ const TaskTable = ({
     isManager ||
     user.role === "TEAM_MEMBER";
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("All");
+  const [openModal, setOpenModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const [tab, setTab] =
-    useState("All");
-
-  const [openModal, setOpenModal] =
-    useState(false);
-
-  const [editingTask, setEditingTask] =
-    useState<Task | null>(null);
-
-  const deleteTask = async (
-    taskId: number
-  ) => {
-    const confirmDelete =
-      window.confirm(
-        "Delete this task?"
-      );
+  const deleteTask = async (taskId: number) => {
+    const confirmDelete = window.confirm("Delete this task?");
 
     if (!confirmDelete) return;
 
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      await api.delete(
-        `/tasks/${taskId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.delete(`/tasks/${taskId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       await refreshTasks();
       await refreshProject();
@@ -85,18 +82,13 @@ const TaskTable = ({
     }
   };
 
-  const updateTaskStatus = async (
-    task: Task,
-    newStatus: string
-  ) => {
+  const updateTaskStatus = async (task: Task, newStatus: string) => {
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      const role =
-        JSON.parse(
-          localStorage.getItem("user") || "{}"
-        ).role;
+      const role = JSON.parse(
+        localStorage.getItem("user") || "{}"
+      ).role;
 
       const payload =
         role === "TEAM_MEMBER"
@@ -115,15 +107,11 @@ const TaskTable = ({
               due_date: task.due_date,
             };
 
-      await api.put(
-        `/tasks/${task.id}`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.put(`/tasks/${task.id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       await refreshTasks();
       await refreshProject();
@@ -133,29 +121,18 @@ const TaskTable = ({
     }
   };
 
-  const filteredTasks =
-    tasks.filter((task) => {
-      const matchesSearch =
-        task.title
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          );
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.title
+      .toLowerCase()
+      .includes(search.toLowerCase());
 
-      if (tab === "All")
-        return matchesSearch;
+    if (tab === "All") return matchesSearch;
 
-      if (tab === "Open")
-        return (
-          task.status !== "Completed" &&
-          matchesSearch
-        );
+    if (tab === "Open")
+      return task.status !== "Completed" && matchesSearch;
 
-      return (
-        task.status === "Completed" &&
-        matchesSearch
-      );
-    });
+    return task.status === "Completed" && matchesSearch;
+  });
 
   return (
     <>
@@ -176,84 +153,43 @@ const TaskTable = ({
         />
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mt-6 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-6 overflow-hidden">
 
         {/* Header */}
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 flex-wrap gap-3">
 
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3 top-3 text-gray-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
             />
 
             <input
               type="text"
               placeholder="Search task..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              className="
-                w-64
-                pl-9
-                pr-3
-                py-2
-                text-sm
-                border
-                border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2
-                focus:ring-blue-500
-              "
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 pl-10 pr-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
             />
           </div>
 
           <div className="flex items-center gap-3">
 
-            <div className="flex overflow-hidden rounded-lg border border-gray-300">
-
-              <button
-                onClick={() =>
-                  setTab("All")
-                }
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  tab === "All"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                All
-              </button>
-
-              <button
-                onClick={() =>
-                  setTab("Open")
-                }
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  tab === "Open"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                Open
-              </button>
-
-              <button
-                onClick={() =>
-                  setTab("Closed")
-                }
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  tab === "Closed"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                Closed
-              </button>
-
+            <div className="flex overflow-hidden rounded-lg border border-slate-300">
+              {["All", "Open", "Closed"].map((tabOption) => (
+                <button
+                  key={tabOption}
+                  onClick={() => setTab(tabOption)}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    tab === tabOption
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {tabOption}
+                </button>
+              ))}
             </div>
 
             {canCreateTask && (
@@ -262,7 +198,7 @@ const TaskTable = ({
                   setEditingTask(null);
                   setOpenModal(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors"
               >
                 <Plus size={16} />
                 Add Task
@@ -274,165 +210,118 @@ const TaskTable = ({
 
         <table className="w-full">
 
-          <thead className="bg-gray-50">
-            <tr className="text-sm text-gray-600">
+          <thead className="bg-slate-50">
+            <tr className="text-[11px] uppercase tracking-wider text-slate-500">
 
-              <th className="py-3 text-center w-16 font-semibold">
-                Sl.No.
-              </th>
-
-              <th className="py-3 text-left font-semibold">
-                Title
-              </th>
-
-              <th className="py-3 text-left font-semibold">
-                Description
-              </th>
-
-              <th className="py-3 text-center w-36 font-semibold">
-                Status
-              </th>
-
-              <th className="py-3 text-center w-32 font-semibold">
-                Priority
-              </th>
-
-              <th className="py-3 text-center w-40 font-semibold">
-                Assigned To
-              </th>
-
-              <th className="py-3 text-center w-36 font-semibold">
-                Due Date
-              </th>
-
-              <th className="py-3 text-center w-40 font-semibold">
-                Action
-              </th>
+              <th className="py-3 text-center w-16 font-semibold">Sl.No.</th>
+              <th className="py-3 text-left font-semibold">Title</th>
+              <th className="py-3 text-left font-semibold">Description</th>
+              <th className="py-3 text-center w-36 font-semibold">Status</th>
+              <th className="py-3 text-center w-32 font-semibold">Priority</th>
+              <th className="py-3 text-center w-40 font-semibold">Assigned To</th>
+              <th className="py-3 text-center w-32 font-semibold">Due Date</th>
+              <th className="py-3 text-center w-24 font-semibold">Action</th>
 
             </tr>
           </thead>
 
           <tbody>
 
-            {filteredTasks.map(
-              (task, index) => (
-                <tr
-                  key={task.id}
-                  className="border-b border-gray-100 hover:bg-blue-50 transition-colors duration-200"
-                >
+            {filteredTasks.map((task, index) => (
+              <tr
+                key={task.id}
+                className="border-b border-slate-100 hover:bg-blue-50/40 transition-colors"
+              >
 
-                  <td className="py-3 text-center text-sm font-medium">
-                    {index + 1}
-                  </td>
+                <td className="py-3 text-center text-sm text-slate-500">
+                  {index + 1}
+                </td>
 
-                  <td className="py-3 text-sm font-medium">
-                    {task.title}
-                  </td>
+                <td className="py-3 text-sm font-medium text-slate-800">
+                  {task.title}
+                </td>
 
-                  <td className="py-3 text-sm">
-                    {task.description}
-                  </td>
+                <td className="py-3 text-sm text-slate-600">
+                  {task.description}
+                </td>
 
-                  <td className="py-3 text-center">
+                <td className="py-3 text-center">
 
-                    {isManager ? (
-                      <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                          task.status === "Completed"
-                            ? "bg-green-100 text-green-700"
-                            : task.status === "In Progress"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}
-                      >
-                        {task.status}
-                      </span>
-                    ) : (
-                      <select
-                        value={task.status}
-                        onChange={(e) =>
-                          updateTaskStatus(
-                            task,
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-2 py-1 text-sm"
-                      >
-                        <option value="Not Started">
-                          Not Started
-                        </option>
-
-                        <option value="In Progress">
-                          In Progress
-                        </option>
-
-                        <option value="Completed">
-                          Completed
-                        </option>
-                      </select>
-                    )}
-
-                  </td>
-
-                  <td className="py-3 text-center">
-
+                  {isManager ? (
                     <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                        task.priority === "High"
-                          ? "bg-red-100 text-red-700"
-                          : task.priority === "Medium"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-green-100 text-green-700"
+                      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        statusStyles[task.status] ??
+                        "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {task.priority}
+                      {task.status}
                     </span>
+                  ) : (
+                    <select
+                      value={task.status}
+                      onChange={(e) =>
+                        updateTaskStatus(task, e.target.value)
+                      }
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Not Started">Not Started</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  )}
 
-                  </td>
+                </td>
 
-                  <td className="py-3 text-center text-sm">
-                    {task.assigned_to_name ?? "-"}
-                  </td>
+                <td className="py-3 text-center">
+                  <span
+                    className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      priorityStyles[task.priority] ??
+                      "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {task.priority}
+                  </span>
+                </td>
 
-                  <td className="py-3 text-center text-sm">
-                    {task.due_date}
-                  </td>
+                <td className="py-3 text-center text-sm text-slate-600">
+                  {task.assigned_to_name ?? "-"}
+                </td>
 
-                  <td className="py-3 text-center">
+                <td className="py-3 text-center text-sm text-slate-600">
+                  {task.due_date}
+                </td>
 
-                    <div className="flex justify-center gap-2">
+                <td className="py-3 text-center">
 
-                      {isManager && (
-                        <>
-                          <button
-                            onClick={() => {
-                              setEditingTask(task);
-                              setOpenModal(true);
-                            }}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition"
-                          >
-                            <Pencil size={15} />
-                            Edit
-                          </button>
+                  {isManager && (
+                    <div className="flex justify-center gap-1.5">
 
-                          <button
-                            onClick={() =>
-                              deleteTask(task.id)
-                            }
-                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => {
+                          setEditingTask(task);
+                          setOpenModal(true);
+                        }}
+                        title="Edit task"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors"
+                      >
+                        <Pencil size={14} strokeWidth={2} />
+                      </button>
+
+                      <button
+                        onClick={() => deleteTask(task.id)}
+                        title="Delete task"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 size={14} strokeWidth={2} />
+                      </button>
 
                     </div>
+                  )}
 
-                  </td>
+                </td>
 
-                </tr>
-              )
-            )}
+              </tr>
+            ))}
 
           </tbody>
         </table>
@@ -440,34 +329,28 @@ const TaskTable = ({
         {/* Empty State */}
 
         {filteredTasks.length === 0 && (
-          <div className="py-12 flex flex-col items-center justify-center">
+          <div className="py-14 flex flex-col items-center justify-center">
+            <ClipboardList size={40} strokeWidth={1.5} className="text-slate-300 mb-3" />
 
-            <div className="text-5xl mb-3">
-              📋
-            </div>
-
-            <h3 className="text-lg font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-slate-700">
               No Tasks Found
             </h3>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-xs text-slate-500">
               Add a new task to get started.
             </p>
-
           </div>
         )}
 
         {/* Footer */}
 
-        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-200 bg-slate-50">
 
-          <p className="text-sm text-gray-500">
+          <p className="text-xs text-slate-500">
             Showing
-
-            <span className="mx-1 font-semibold text-gray-700">
+            <span className="mx-1 font-semibold text-slate-700">
               {filteredTasks.length}
             </span>
-
             task(s)
           </p>
 

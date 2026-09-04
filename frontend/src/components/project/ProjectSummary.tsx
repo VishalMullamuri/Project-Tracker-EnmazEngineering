@@ -13,48 +13,34 @@ type Props = {
   tasks: Task[];
 };
 
-const ProjectSummary = ({
-  tasks,
-}: Props) => {
+const ProjectSummary = ({ tasks }: Props) => {
 
-  const totalTasks =
-    tasks.length;
+  const totalTasks = tasks.length;
 
-  const completedTasks =
-    tasks.filter(
-      (task) =>
-        task.status === "Completed"
-    ).length;
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed"
+  ).length;
 
-  const pendingTasks =
-    tasks.filter(
-      (task) =>
-        task.status === "Not Started"
-    ).length;
+  const pendingTasks = tasks.filter(
+    (task) => task.status === "Not Started"
+  ).length;
 
-  const teamMembers =
-    new Set(
-      tasks.map(
-        (task) =>
-          task.assigned_to
-      )
-    ).size;
+  const teamMembers = new Set(
+    tasks.map((task) => task.assigned_to)
+  ).size;
 
   return (
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 
       <SummaryCard
         title="Total Tasks"
         value={totalTasks}
         subtitle="All Tasks"
         icon={
-          <ListChecks
-            size={28}
-            className="text-blue-600"
-          />
+          <ListChecks size={24} className="text-blue-600" strokeWidth={1.75} />
         }
-        iconBg="bg-blue-100"
+        iconBg="bg-blue-50"
       />
 
       <SummaryCard
@@ -63,12 +49,9 @@ const ProjectSummary = ({
         subtitle="Successfully Done"
         valueColor="text-green-600"
         icon={
-          <CheckCircle2
-            size={28}
-            className="text-green-600"
-          />
+          <CheckCircle2 size={24} className="text-green-600" strokeWidth={1.75} />
         }
-        iconBg="bg-green-100"
+        iconBg="bg-green-50"
       />
 
       <SummaryCard
@@ -77,12 +60,9 @@ const ProjectSummary = ({
         subtitle="Remaining Tasks"
         valueColor="text-orange-500"
         icon={
-          <Clock3
-            size={28}
-            className="text-orange-500"
-          />
+          <Clock3 size={24} className="text-orange-500" strokeWidth={1.75} />
         }
-        iconBg="bg-orange-100"
+        iconBg="bg-orange-50"
       />
 
       <SummaryCard
@@ -90,12 +70,9 @@ const ProjectSummary = ({
         value={teamMembers}
         subtitle="Assigned Users"
         icon={
-          <Users
-            size={28}
-            className="text-purple-600"
-          />
+          <Users size={24} className="text-purple-600" strokeWidth={1.75} />
         }
-        iconBg="bg-purple-100"
+        iconBg="bg-purple-50"
       />
 
     </div>
