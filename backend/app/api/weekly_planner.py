@@ -41,7 +41,7 @@ def require_planner_manager(
     ):
         raise HTTPException(
             status_code=403,
-            detail=("Only admins and managers can modify the weekly planner"),
+            detail="Only admins and managers can modify the weekly planner",
         )
 
     return current_user
@@ -88,7 +88,7 @@ def get_single_planner_task(
     if not task:
         raise HTTPException(
             status_code=404,
-            detail=("Weekly planner task not found"),
+            detail="Weekly planner task not found",
         )
 
     return task
@@ -143,7 +143,9 @@ def remove_planner_task(
     if not deleted:
         raise HTTPException(
             status_code=404,
-            detail=("Weekly planner task not found"),
+            detail="Weekly planner task not found",
         )
 
-    return {"message": "Weekly planner task deleted successfully"}
+    return {
+        "message": "Weekly planner task deleted successfully"
+    }

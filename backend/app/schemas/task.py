@@ -106,3 +106,4 @@ class TaskResponse(BaseModel):
     due_date: date
     created_by: int
     assigned_to_name: str | None = None
+    created_by: int

@@ -51,9 +51,18 @@ const TaskTable = ({
     user.role === "MANAGER" ||
     user.role === "ADMIN";
 
-  const canCreateTask =
-    isManager ||
+  const isTeamMember =
     user.role === "TEAM_MEMBER";
+
+  const canCreateTask =
+    isManager || isTeamMember;
+
+  const canModifyTask = (task: Task) =>
+    isManager ||
+    (
+      isTeamMember &&
+      task.created_by === user.id
+    );
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("All");
@@ -61,7 +70,9 @@ const TaskTable = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const deleteTask = async (taskId: number) => {
-    const confirmDelete = window.confirm("Delete this task?");
+    const confirmDelete = window.confirm(
+      "Delete this task?"
+    );
 
     if (!confirmDelete) return;
 
@@ -82,36 +93,38 @@ const TaskTable = ({
     }
   };
 
-  const updateTaskStatus = async (task: Task, newStatus: string) => {
+  const updateTaskStatus = async (
+    task: Task,
+    newStatus: string
+  ) => {
     try {
       const token = localStorage.getItem("token");
 
-      const role = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      ).role;
+      const payload = isTeamMember
+        ? {
+            status: newStatus,
+            remarks: task.remarks,
+          }
+        : {
+            assigned_to: task.assigned_to,
+            title: task.title,
+            description: task.description,
+            status: newStatus,
+            priority: task.priority,
+            remarks: task.remarks,
+            start_date: task.start_date,
+            due_date: task.due_date,
+          };
 
-      const payload =
-        role === "TEAM_MEMBER"
-          ? {
-              status: newStatus,
-              remarks: task.remarks,
-            }
-          : {
-              assigned_to: task.assigned_to,
-              title: task.title,
-              description: task.description,
-              status: newStatus,
-              priority: task.priority,
-              remarks: task.remarks,
-              start_date: task.start_date,
-              due_date: task.due_date,
-            };
-
-      await api.put(`/tasks/${task.id}`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await api.put(
+        `/tasks/${task.id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       await refreshTasks();
       await refreshProject();
@@ -126,12 +139,21 @@ const TaskTable = ({
       .toLowerCase()
       .includes(search.toLowerCase());
 
-    if (tab === "All") return matchesSearch;
+    if (tab === "All") {
+      return matchesSearch;
+    }
 
-    if (tab === "Open")
-      return task.status !== "Completed" && matchesSearch;
+    if (tab === "Open") {
+      return (
+        task.status !== "Completed" &&
+        matchesSearch
+      );
+    }
 
-    return task.status === "Completed" && matchesSearch;
+    return (
+      task.status === "Completed" &&
+      matchesSearch
+    );
   });
 
   return (
@@ -169,7 +191,9 @@ const TaskTable = ({
               type="text"
               placeholder="Search task..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
               className="w-64 pl-10 pr-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
             />
           </div>
@@ -177,19 +201,23 @@ const TaskTable = ({
           <div className="flex items-center gap-3">
 
             <div className="flex overflow-hidden rounded-lg border border-slate-300">
-              {["All", "Open", "Closed"].map((tabOption) => (
-                <button
-                  key={tabOption}
-                  onClick={() => setTab(tabOption)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    tab === tabOption
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {tabOption}
-                </button>
-              ))}
+              {["All", "Open", "Closed"].map(
+                (tabOption) => (
+                  <button
+                    key={tabOption}
+                    onClick={() =>
+                      setTab(tabOption)
+                    }
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      tab === tabOption
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {tabOption}
+                  </button>
+                )
+              )}
             </div>
 
             {canCreateTask && (
@@ -213,14 +241,37 @@ const TaskTable = ({
           <thead className="bg-slate-50">
             <tr className="text-[11px] uppercase tracking-wider text-slate-500">
 
-              <th className="py-3 text-center w-16 font-semibold">Sl.No.</th>
-              <th className="py-3 text-left font-semibold">Title</th>
-              <th className="py-3 text-left font-semibold">Description</th>
-              <th className="py-3 text-center w-36 font-semibold">Status</th>
-              <th className="py-3 text-center w-32 font-semibold">Priority</th>
-              <th className="py-3 text-center w-40 font-semibold">Assigned To</th>
-              <th className="py-3 text-center w-32 font-semibold">Due Date</th>
-              <th className="py-3 text-center w-24 font-semibold">Action</th>
+              <th className="py-3 text-center w-16 font-semibold">
+                Sl.No.
+              </th>
+
+              <th className="py-3 text-left font-semibold">
+                Title
+              </th>
+
+              <th className="py-3 text-left font-semibold">
+                Description
+              </th>
+
+              <th className="py-3 text-center w-36 font-semibold">
+                Status
+              </th>
+
+              <th className="py-3 text-center w-32 font-semibold">
+                Priority
+              </th>
+
+              <th className="py-3 text-center w-40 font-semibold">
+                Assigned To
+              </th>
+
+              <th className="py-3 text-center w-32 font-semibold">
+                Due Date
+              </th>
+
+              <th className="py-3 text-center w-24 font-semibold">
+                Action
+              </th>
 
             </tr>
           </thead>
@@ -260,13 +311,24 @@ const TaskTable = ({
                     <select
                       value={task.status}
                       onChange={(e) =>
-                        updateTaskStatus(task, e.target.value)
+                        updateTaskStatus(
+                          task,
+                          e.target.value
+                        )
                       }
                       className="border border-slate-300 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Not Started">Not Started</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
+                      <option value="Not Started">
+                        Not Started
+                      </option>
+
+                      <option value="In Progress">
+                        In Progress
+                      </option>
+
+                      <option value="Completed">
+                        Completed
+                      </option>
                     </select>
                   )}
 
@@ -293,7 +355,7 @@ const TaskTable = ({
 
                 <td className="py-3 text-center">
 
-                  {isManager && (
+                  {canModifyTask(task) && (
                     <div className="flex justify-center gap-1.5">
 
                       <button
@@ -304,15 +366,23 @@ const TaskTable = ({
                         title="Edit task"
                         className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors"
                       >
-                        <Pencil size={14} strokeWidth={2} />
+                        <Pencil
+                          size={14}
+                          strokeWidth={2}
+                        />
                       </button>
 
                       <button
-                        onClick={() => deleteTask(task.id)}
+                        onClick={() =>
+                          deleteTask(task.id)
+                        }
                         title="Delete task"
                         className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
                       >
-                        <Trash2 size={14} strokeWidth={2} />
+                        <Trash2
+                          size={14}
+                          strokeWidth={2}
+                        />
                       </button>
 
                     </div>
@@ -330,7 +400,12 @@ const TaskTable = ({
 
         {filteredTasks.length === 0 && (
           <div className="py-14 flex flex-col items-center justify-center">
-            <ClipboardList size={40} strokeWidth={1.5} className="text-slate-300 mb-3" />
+
+            <ClipboardList
+              size={40}
+              strokeWidth={1.5}
+              className="text-slate-300 mb-3"
+            />
 
             <h3 className="text-sm font-semibold text-slate-700">
               No Tasks Found
@@ -339,6 +414,7 @@ const TaskTable = ({
             <p className="mt-1 text-xs text-slate-500">
               Add a new task to get started.
             </p>
+
           </div>
         )}
 

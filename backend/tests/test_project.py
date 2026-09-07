@@ -1,5 +1,7 @@
 from datetime import date
 
+from app.core.enums import UserRole
+
 
 def test_create_project(
     client,
@@ -224,4 +226,101 @@ def test_dashboard_counts_match_project_list(
     )
     assert stats["not_started_projects"] == sum(
         p["status"] == "Not Started" for p in project_list
+    )
+
+def test_create_project_with_nonexistent_employee_returns_404(
+    client,
+    manager_headers,
+):
+    response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Invalid Employee Project",
+            "description": "Testing invalid employee",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+            "employee_ids": [999999],
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Employee not found"
+
+
+def test_create_project_with_inactive_employee_returns_404(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
+    employee_user.is_active = False
+    db.commit()
+
+    response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Inactive Employee Project",
+            "description": "Testing inactive employee",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+            "employee_ids": [employee_user.id],
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Employee not found"
+
+
+def test_create_project_with_inactive_user_returns_404(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
+    employee_user.user.is_active = False
+    db.commit()
+
+    response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Inactive User Project",
+            "description": "Testing inactive user",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+            "employee_ids": [employee_user.id],
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Employee not found"
+
+
+def test_create_project_with_non_team_member_returns_400(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+):
+    employee_user.user.role = UserRole.MANAGER
+    db.commit()
+
+    response = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Invalid Role Project",
+            "description": "Testing invalid employee role",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+            "employee_ids": [employee_user.id],
+        },
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Only team members can be assigned to projects"
     )

@@ -10,6 +10,7 @@ export type Task = {
   assigned_to_name?: string;
   title: string;
   description: string;
+  created_by: number;
   status: "Not Started" | "In Progress" | "Completed";
   priority: "Low" | "Medium" | "High";
   remarks: string;

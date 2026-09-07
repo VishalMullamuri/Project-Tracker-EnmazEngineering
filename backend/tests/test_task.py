@@ -217,7 +217,7 @@ def test_team_member_can_update_own_task(
     assert response.json()["remarks"] == "Completed successfully"
 
 
-def test_team_member_cannot_delete_task(
+def test_team_member_can_delete_own_task(
     client,
     manager_headers,
     employee_headers,
@@ -236,7 +236,8 @@ def test_team_member_cannot_delete_task(
         headers=employee_headers,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()["message"] == "Task deleted successfully"
 
 
 def test_manager_partial_update(

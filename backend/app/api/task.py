@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.permissions import require_manager
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.employee import Employee
@@ -155,8 +154,9 @@ def edit_task(
     return updated
 
 
+
 # ----------------------------------
-# Delete Task (Manager Only)
+# Delete Task
 # ----------------------------------
 
 
@@ -164,7 +164,7 @@ def edit_task(
 def remove_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager),
+    current_user: User = Depends(get_current_user),
 ):
     deleted = delete_task(
         db,

@@ -30,6 +30,10 @@ const Layout = ({ children }: LayoutProps) => {
     user.role === "MANAGER" ||
     user.role === "ADMIN";
 
+  const isPlannerUser =
+    user.role === "MANAGER" ||
+    user.role === "ADMIN";
+
   const handleLogout = () => {
     const confirmLogout = window.confirm(
       "Are you sure you want to logout?"
@@ -69,12 +73,16 @@ const Layout = ({ children }: LayoutProps) => {
       icon: Users,
       visible: isManager,
     },
-    {
-      label: "Weekly Planner",
-      path: "/weekly-planner",
-      icon: CalendarDays,
-      visible: true,
-    },
+    ...(isPlannerUser
+      ? [
+          {
+            label: "Weekly Planner",
+            path: "/weekly-planner",
+            icon: CalendarDays,
+            visible: true,
+          },
+        ]
+      : []),
     {
       label: "Daily Worksheet",
       path: "/daily-worksheet",
@@ -111,6 +119,7 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm shrink-0">
                 PT
               </span>
+
               <span className="text-[17px] font-bold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
                 Project Tracker
               </span>
@@ -154,8 +163,13 @@ const Layout = ({ children }: LayoutProps) => {
                     <Icon
                       size={18}
                       strokeWidth={active ? 2.25 : 1.75}
-                      className={active ? "text-blue-600" : "text-slate-400"}
+                      className={
+                        active
+                          ? "text-blue-600"
+                          : "text-slate-400"
+                      }
                     />
+
                     <span>{item.label}</span>
                   </button>
                 );
