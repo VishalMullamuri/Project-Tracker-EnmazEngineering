@@ -16,6 +16,8 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.services.project_service import (
+    EmployeeNotFoundError,
+    InvalidProjectEmployeeError,
     create_project,
     delete_project,
     get_all_projects,
@@ -42,18 +44,15 @@ def create_new_project(
 ):
     try:
         return create_project(db, project, current_user.id)
-    except ValueError as exc:
-        detail = str(exc)
-
-        if detail == "Only team members can be assigned to projects":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=detail,
-            ) from exc
-
+    except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=detail,
+            detail=str(exc),
+        ) from exc
+    except InvalidProjectEmployeeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
         ) from exc
 
 

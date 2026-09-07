@@ -14,6 +14,14 @@ from app.schemas.project import (
 )
 
 
+class EmployeeNotFoundError(ValueError):
+    pass
+
+
+class InvalidProjectEmployeeError(ValueError):
+    pass
+
+
 def calculate_progress(
     db: Session,
     project_id: int,
@@ -49,6 +57,28 @@ def calculate_progress(
     return progress
 
 
+def get_project_status(
+    project: Project,
+    tasks: list[Task],
+) -> str:
+    if not tasks:
+        return "Not Started"
+
+    if all(task.status == "Completed" for task in tasks):
+        return "Completed"
+
+    if date.today() > project.end_date:
+        return "Delayed"
+
+    if any(task.status == "In Progress" for task in tasks):
+        return "In Progress"
+
+    if project.progress > 0:
+        return "In Progress"
+
+    return "Not Started"
+
+
 def update_project_status(
     db: Session,
     project_id: int,
@@ -68,16 +98,10 @@ def update_project_status(
         .all()
     )
 
-    if not tasks:
-        project.status = "Not Started"
-    elif all(task.status == "Completed" for task in tasks):
-        project.status = "Completed"
-    elif date.today() > project.end_date:
-        project.status = "Delayed"
-    elif any(task.status == "In Progress" for task in tasks):
-        project.status = "In Progress"
-    else:
-        project.status = "Not Started"
+    project.status = get_project_status(
+        project,
+        tasks,
+    )
 
     db.flush()
 
@@ -109,14 +133,20 @@ def create_project(
             Employee.id.in_(unique_employee_ids),
             Employee.is_active.is_(True),
             User.is_active.is_(True),
-            User.role == UserRole.TEAM_MEMBER,
         )
         .all()
     )
 
     if len(employees) != len(unique_employee_ids):
         db.rollback()
-        raise ValueError(
+        raise EmployeeNotFoundError("Employee not found")
+
+    if any(
+        employee.user.role != UserRole.TEAM_MEMBER
+        for employee in employees
+    ):
+        db.rollback()
+        raise InvalidProjectEmployeeError(
             "Only team members can be assigned to projects"
         )
 
@@ -132,28 +162,6 @@ def create_project(
     db.refresh(new_project)
 
     return new_project
-
-
-def get_project_status(
-    project: Project,
-    tasks: list[Task],
-):
-    if not tasks:
-        return "Not Started"
-
-    if all(task.status == "Completed" for task in tasks):
-        return "Completed"
-
-    if date.today() > project.end_date:
-        return "Delayed"
-
-    if any(task.status == "In Progress" for task in tasks):
-        return "In Progress"
-
-    if project.progress > 0:
-        return "In Progress"
-
-    return "Not Started"
 
 
 def get_all_projects(
