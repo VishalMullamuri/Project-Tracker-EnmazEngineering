@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import api from "../api/axios";
 
+import SummaryCard from "../components/dashboard/SummaryCard";
+
 import {
   AlertCircle,
   CalendarDays,
@@ -59,21 +61,25 @@ const statusOptions: TaskStatus[] = [
   "Delayed",
 ];
 
-// Status -> pill classes (matches the pastel badge style used across the app)
-const getStatusStyle = (status: TaskStatus) => {
-  switch (status) {
-    case "Not Started":
-      return "bg-white border border-gray-300 text-gray-700";
-    case "In Progress":
-      return "bg-blue-100 text-blue-600";
-    case "Completed":
-      return "bg-green-100 text-green-600";
-    case "Delayed":
-      return "bg-red-100 text-red-600";
-    default:
-      return "bg-white border border-gray-300 text-gray-700";
-  }
+const statusPillStyles: Record<TaskStatus, string> = {
+  "Not Started": "bg-orange-100 text-orange-700",
+  "In Progress": "bg-blue-100 text-blue-700",
+  Completed: "bg-green-100 text-green-700",
+  Delayed: "bg-red-100 text-red-700",
 };
+
+const getStatusStyle = (status: TaskStatus) => {
+  return statusPillStyles[status] ?? "bg-slate-100 text-slate-700";
+};
+
+const AVATAR_PALETTE = [
+  "bg-blue-100 text-blue-700",
+  "bg-purple-100 text-purple-700",
+  "bg-pink-100 text-pink-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-cyan-100 text-cyan-700",
+];
 
 const getInitials = (name: string) => {
   return name
@@ -85,18 +91,11 @@ const getInitials = (name: string) => {
 };
 
 const getAvatarStyle = (name: string) => {
-  const styles = [
-    "bg-blue-100 text-blue-600",
-    "bg-orange-100 text-orange-600",
-    "bg-purple-100 text-purple-600",
-    "bg-pink-100 text-pink-600",
-  ];
-
   const index =
     name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) %
-    styles.length;
+    AVATAR_PALETTE.length;
 
-  return styles[index];
+  return AVATAR_PALETTE[index];
 };
 
 const getCurrentMonday = () => {
@@ -115,6 +114,12 @@ const formatDateForApi = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+const labelClass =
+  "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2";
+
+const inputClass =
+  "w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-slate-400";
 
 const WeeklyPlanner = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -562,40 +567,86 @@ const WeeklyPlanner = () => {
   return (
     <Layout>
       {/* =====================================================
+          SUMMARY CARDS
+      ====================================================== */}
+
+      <div className="grid grid-cols-4 gap-5">
+        <SummaryCard
+          title="Total Tasks"
+          value={totalTasks}
+          subtitle="All Tasks"
+          icon={
+            <FileText size={28} className="text-blue-600" />
+          }
+          iconBg="bg-blue-100"
+        />
+
+        <SummaryCard
+          title="Delayed"
+          value={delayedTasks}
+          subtitle="Need Attention"
+          icon={
+            <Hourglass size={28} className="text-red-600" />
+          }
+          iconBg="bg-red-100"
+        />
+
+        <SummaryCard
+          title="In Progress"
+          value={inProgressTasks}
+          subtitle="Currently Running"
+          icon={
+            <Clock3 size={28} className="text-blue-600" />
+          }
+          iconBg="bg-blue-100"
+        />
+
+        <SummaryCard
+          title="Completed"
+          value={completedTasks}
+          subtitle="Finished Tasks"
+          icon={
+            <CheckCircle2 size={28} className="text-green-600" />
+          }
+          iconBg="bg-green-100"
+        />
+      </div>
+
+      {/* =====================================================
           WEEK NAVIGATION
       ====================================================== */}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-5 py-5">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-6">
+        <div className="flex items-center justify-between px-6 py-5 flex-wrap gap-4">
           <button
             onClick={goToPreviousWeek}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition"
+            className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
           >
-            <span className="w-10 h-10 rounded-lg border border-gray-300 bg-white flex items-center justify-center hover:bg-gray-100 transition">
-              <ChevronLeft size={18} />
+            <span className="w-9 h-9 rounded-lg border border-slate-300 bg-white flex items-center justify-center hover:bg-slate-50 hover:border-slate-400 transition-colors">
+              <ChevronLeft size={17} strokeWidth={2} />
             </span>
             Previous
           </button>
 
           <div className="flex flex-col items-center gap-3">
-            <h2 className="text-xl font-bold text-slate-800">{weekLabel}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{weekLabel}</h2>
 
             <button
               onClick={goToCurrentWeek}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 transition"
+              className="flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50/50 text-blue-600 hover:bg-blue-50 transition-colors"
             >
-              <CalendarDays size={17} />
+              <CalendarDays size={15} strokeWidth={2} />
               This Week
             </button>
           </div>
 
           <button
             onClick={goToNextWeek}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition"
+            className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
           >
             Next
-            <span className="w-10 h-10 rounded-lg border border-gray-300 bg-white flex items-center justify-center hover:bg-gray-100 transition">
-              <ChevronRight size={18} />
+            <span className="w-9 h-9 rounded-lg border border-slate-300 bg-white flex items-center justify-center hover:bg-slate-50 hover:border-slate-400 transition-colors">
+              <ChevronRight size={17} strokeWidth={2} />
             </span>
           </button>
         </div>
@@ -614,7 +665,7 @@ const WeeklyPlanner = () => {
 
           <button
             onClick={() => setError("")}
-            className="text-red-600 font-medium hover:text-red-800"
+            className="text-red-600 font-semibold hover:text-red-800 transition-colors"
           >
             Dismiss
           </button>
@@ -622,94 +673,20 @@ const WeeklyPlanner = () => {
       )}
 
       {/* =====================================================
-          SUMMARY CARDS
-      ====================================================== */}
-
-      <div className="grid grid-cols-4 gap-5 mt-6">
-        {/* TOTAL */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">
-                Total Tasks
-              </p>
-              <h2 className="text-4xl font-bold mt-2 text-slate-900">
-                {totalTasks}
-              </h2>
-            </div>
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-blue-100">
-              <FileText size={28} className="text-blue-600" />
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 mt-5">All Tasks</p>
-        </div>
-
-        {/* DELAYED */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Delayed</p>
-              <h2 className="text-4xl font-bold mt-2 text-red-600">
-                {delayedTasks}
-              </h2>
-            </div>
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-red-100">
-              <Hourglass size={28} className="text-red-600" />
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 mt-5">Need Attention</p>
-        </div>
-
-        {/* IN PROGRESS */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">
-                In Progress
-              </p>
-              <h2 className="text-4xl font-bold mt-2 text-blue-600">
-                {inProgressTasks}
-              </h2>
-            </div>
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-blue-100">
-              <Clock3 size={28} className="text-blue-600" />
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 mt-5">Currently Running</p>
-        </div>
-
-        {/* COMPLETED */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Completed</p>
-              <h2 className="text-4xl font-bold mt-2 text-green-600">
-                {completedTasks}
-              </h2>
-            </div>
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-green-100">
-              <CheckCircle2 size={28} className="text-green-600" />
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 mt-5">Finished Tasks</p>
-        </div>
-      </div>
-
-      {/* =====================================================
           TASK TABLE CONTAINER
       ====================================================== */}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mt-6 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-6 overflow-hidden">
         {/* ===================================================
             TABLE HEADER
         ==================================================== */}
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 flex-wrap gap-3">
           {/* SEARCH */}
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3 top-3 text-gray-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
             />
             <input
               type="text"
@@ -718,24 +695,24 @@ const WeeklyPlanner = () => {
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
-              className="w-64 pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-64 pl-10 ${inputClass}`}
             />
           </div>
 
           {/* RIGHT CONTROLS */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* STATUS FILTER */}
             <div className="relative">
               <Filter
-                size={16}
-                className="absolute left-3 top-2.5 text-gray-400 pointer-events-none"
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               />
               <select
                 value={statusFilter}
                 onChange={(event) => {
                   setStatusFilter(event.target.value as "All" | TaskStatus);
                 }}
-                className="pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`pl-9 pr-8 ${inputClass} bg-white text-slate-700`}
               >
                 <option value="All">All</option>
                 {statusOptions.map((status) => (
@@ -751,7 +728,7 @@ const WeeklyPlanner = () => {
               <button
                 onClick={handleMoveToNextWeek}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium border border-blue-600 text-blue-600 bg-white rounded-lg hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-semibold border border-blue-200 text-blue-600 bg-blue-50/50 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Move to Next Week ({selectedTaskIds.length})
               </button>
@@ -766,7 +743,7 @@ const WeeklyPlanner = () => {
                   setOpenModal(true);
                 }}
                 disabled={employeesLoading}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 + Add Task
               </button>
@@ -780,8 +757,8 @@ const WeeklyPlanner = () => {
 
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[1100px] table-fixed">
-            <thead className="bg-gray-50">
-              <tr className="text-sm text-gray-600">
+            <thead className="bg-slate-50">
+              <tr className="text-[11px] uppercase tracking-wider text-slate-500">
                 {isManager && (
                   <th className="py-3 px-5 text-center w-16 font-semibold">
                     <input
@@ -789,7 +766,7 @@ const WeeklyPlanner = () => {
                       checked={allVisibleTasksSelected}
                       onChange={toggleSelectAll}
                       disabled={filteredTasks.length === 0 || saving}
-                      className="w-4 h-4 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                       title="Select all"
                     />
                   </th>
@@ -824,7 +801,7 @@ const WeeklyPlanner = () => {
                 <tr>
                   <td
                     colSpan={isManager ? 7 : 5}
-                    className="py-12 text-center text-sm text-gray-500"
+                    className="py-12 text-center text-sm text-slate-500"
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Loader2
@@ -839,7 +816,7 @@ const WeeklyPlanner = () => {
                 filteredTasks.map((task, index) => (
                   <tr
                     key={task.id}
-                    className="border-b border-gray-100 hover:bg-blue-50 transition-colors duration-200"
+                    className="border-b border-slate-100 hover:bg-blue-50/40 transition-colors"
                   >
                     {/* SELECT */}
                     {isManager && (
@@ -849,18 +826,18 @@ const WeeklyPlanner = () => {
                           checked={selectedTaskIds.includes(task.id)}
                           onChange={() => toggleTaskSelection(task.id)}
                           disabled={saving}
-                          className="w-4 h-4 cursor-pointer"
+                          className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                         />
                       </td>
                     )}
 
                     {/* NUMBER */}
-                    <td className="py-3 px-5 text-center text-sm font-medium text-gray-700">
+                    <td className="py-3 px-5 text-center text-sm text-slate-500">
                       {index + 1}
                     </td>
 
                     {/* TASK */}
-                    <td className="py-3 px-5 font-medium text-gray-800 truncate">
+                    <td className="py-3 px-5 text-sm font-medium text-slate-800 truncate">
                       {task.task}
                     </td>
 
@@ -868,13 +845,13 @@ const WeeklyPlanner = () => {
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${getAvatarStyle(
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${getAvatarStyle(
                             task.employee_name || "Employee"
                           )}`}
                         >
                           {getInitials(task.employee_name || "Employee")}
                         </div>
-                        <span className="text-sm font-medium text-gray-700 truncate">
+                        <span className="text-sm font-medium text-slate-700 truncate">
                           {task.employee_name || "Unknown"}
                         </span>
                       </div>
@@ -883,7 +860,7 @@ const WeeklyPlanner = () => {
                     {/* STATUS */}
                     <td className="py-3 px-5 text-center">
                       <span
-                        className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${getStatusStyle(
+                        className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusStyle(
                           task.status
                         )}`}
                       >
@@ -893,7 +870,7 @@ const WeeklyPlanner = () => {
 
                     {/* REMARKS */}
                     <td className="py-3 px-5 text-left">
-                      <span className="text-sm text-gray-600 truncate block">
+                      <span className="text-sm text-slate-600 truncate block">
                         {task.remarks || "-"}
                       </span>
                     </td>
@@ -901,25 +878,25 @@ const WeeklyPlanner = () => {
                     {/* ACTION */}
                     {isManager && (
                       <td className="py-3 px-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
                           {/* EDIT */}
                           <button
                             onClick={() => openEditModal(task)}
                             disabled={saving}
-                            className="w-9 h-9 rounded-lg border border-gray-300 bg-white text-blue-600 flex items-center justify-center hover:bg-blue-50 transition disabled:opacity-50"
+                            className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50"
                             title="Edit"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} strokeWidth={2} />
                           </button>
 
                           {/* DELETE */}
                           <button
                             onClick={() => handleDeleteTask(task.id)}
                             disabled={saving}
-                            className="w-9 h-9 rounded-lg border border-gray-300 bg-white text-red-600 flex items-center justify-center hover:bg-red-50 transition disabled:opacity-50"
+                            className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
                             title="Delete"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} strokeWidth={2} />
                           </button>
                         </div>
                       </td>
@@ -936,14 +913,12 @@ const WeeklyPlanner = () => {
         ==================================================== */}
 
         {!loading && filteredTasks.length === 0 && (
-          <div className="py-10 flex flex-col items-center justify-center text-gray-500">
-            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-3">
-              <ClipboardList size={22} className="text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-700">
+          <div className="py-14 flex flex-col items-center justify-center">
+            <ClipboardList size={40} strokeWidth={1.5} className="text-slate-300 mb-3" />
+            <h3 className="text-sm font-semibold text-slate-700">
               No Tasks Found
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               {search || statusFilter !== "All"
                 ? "Try changing your search or filter."
                 : "There are no tasks for this week."}
@@ -955,10 +930,10 @@ const WeeklyPlanner = () => {
             FOOTER
         ==================================================== */}
 
-        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-500">
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-200 bg-slate-50">
+          <p className="text-xs text-slate-500">
             Showing
-            <span className="font-semibold text-gray-700 mx-1">
+            <span className="font-semibold text-slate-700 mx-1">
               {filteredTasks.length}
             </span>
             task(s)
@@ -971,30 +946,33 @@ const WeeklyPlanner = () => {
       ====================================================== */}
 
       {openModal && isManager && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-xl shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Add Weekly Task
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <CalendarDays size={18} strokeWidth={1.75} className="text-blue-600" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Add Weekly Task
+                </h2>
+              </div>
               <button
                 onClick={() => {
                   resetForm();
                   setOpenModal(false);
                 }}
                 disabled={saving}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition disabled:opacity-50"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-50"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* TASK */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Task
-                </label>
+                <label className={labelClass}>Task</label>
                 <input
                   type="text"
                   value={newTask.task}
@@ -1002,15 +980,13 @@ const WeeklyPlanner = () => {
                     setNewTask({ ...newTask, task: event.target.value })
                   }
                   placeholder="Enter task name"
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
               </div>
 
               {/* EMPLOYEE */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Employee
-                </label>
+                <label className={labelClass}>Employee</label>
                 <select
                   value={newTask.employee_id}
                   onChange={(event) =>
@@ -1020,7 +996,7 @@ const WeeklyPlanner = () => {
                     })
                   }
                   disabled={employeesLoading}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className={`${inputClass} bg-white disabled:bg-slate-100`}
                 >
                   <option value="">
                     {employeesLoading
@@ -1037,9 +1013,7 @@ const WeeklyPlanner = () => {
 
               {/* STATUS */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
+                <label className={labelClass}>Status</label>
                 <select
                   value={newTask.status}
                   onChange={(event) =>
@@ -1048,7 +1022,7 @@ const WeeklyPlanner = () => {
                       status: event.target.value as TaskStatus,
                     })
                   }
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`${inputClass} bg-white`}
                 >
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
@@ -1060,9 +1034,7 @@ const WeeklyPlanner = () => {
 
               {/* REMARKS */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Remarks
-                </label>
+                <label className={labelClass}>Remarks</label>
                 <textarea
                   value={newTask.remarks}
                   onChange={(event) =>
@@ -1070,19 +1042,19 @@ const WeeklyPlanner = () => {
                   }
                   placeholder="Add remarks"
                   rows={4}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`${inputClass} resize-none`}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200">
+            <div className="flex justify-end gap-3 px-6 py-5 border-t border-slate-200 bg-slate-50 shrink-0">
               <button
                 onClick={() => {
                   resetForm();
                   setOpenModal(false);
                 }}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
+                className="px-4 py-2.5 text-sm font-semibold border border-slate-300 bg-white text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1090,7 +1062,7 @@ const WeeklyPlanner = () => {
               <button
                 onClick={handleAddTask}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Adding..." : "Add Task"}
               </button>
@@ -1104,27 +1076,30 @@ const WeeklyPlanner = () => {
       ====================================================== */}
 
       {editingTask && isManager && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-xl shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Edit Weekly Task
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <Pencil size={16} strokeWidth={1.75} className="text-blue-600" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Edit Weekly Task
+                </h2>
+              </div>
               <button
                 onClick={() => setEditingTask(null)}
                 disabled={saving}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition disabled:opacity-50"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-50"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* TASK */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Task
-                </label>
+                <label className={labelClass}>Task</label>
                 <input
                   type="text"
                   value={editingTask.task}
@@ -1134,15 +1109,13 @@ const WeeklyPlanner = () => {
                       task: event.target.value,
                     })
                   }
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
               </div>
 
               {/* EMPLOYEE */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Employee
-                </label>
+                <label className={labelClass}>Employee</label>
                 <select
                   value={String(editingTask.employee_id)}
                   onChange={(event) =>
@@ -1152,7 +1125,7 @@ const WeeklyPlanner = () => {
                     })
                   }
                   disabled={employeesLoading}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className={`${inputClass} bg-white disabled:bg-slate-100`}
                 >
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
@@ -1164,9 +1137,7 @@ const WeeklyPlanner = () => {
 
               {/* STATUS */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
+                <label className={labelClass}>Status</label>
                 <select
                   value={editingTask.status}
                   onChange={(event) =>
@@ -1175,7 +1146,7 @@ const WeeklyPlanner = () => {
                       status: event.target.value as TaskStatus,
                     })
                   }
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`${inputClass} bg-white`}
                 >
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
@@ -1187,9 +1158,7 @@ const WeeklyPlanner = () => {
 
               {/* REMARKS */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Remarks
-                </label>
+                <label className={labelClass}>Remarks</label>
                 <textarea
                   value={editingTask.remarks || ""}
                   onChange={(event) =>
@@ -1199,16 +1168,16 @@ const WeeklyPlanner = () => {
                     })
                   }
                   rows={4}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`${inputClass} resize-none`}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200">
+            <div className="flex justify-end gap-3 px-6 py-5 border-t border-slate-200 bg-slate-50 shrink-0">
               <button
                 onClick={() => setEditingTask(null)}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
+                className="px-4 py-2.5 text-sm font-semibold border border-slate-300 bg-white text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1216,7 +1185,7 @@ const WeeklyPlanner = () => {
               <button
                 onClick={handleEditTask}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>

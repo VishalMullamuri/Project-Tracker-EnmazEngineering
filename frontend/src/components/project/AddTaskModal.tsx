@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ClipboardList, X } from "lucide-react";
 import api from "../../api/axios";
 import axios from "axios";
 import type { Employee } from "../../types/employee";
@@ -26,6 +27,12 @@ type Props = {
   onClose: () => void;
   onSaveTask: () => Promise<void>;
 };
+
+const labelClass =
+  "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2";
+
+const inputClass =
+  "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-slate-400";
 
 const AddTaskModal = ({
   isOpen,
@@ -207,38 +214,54 @@ const AddTaskModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
 
-        <div className="px-8 py-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-slate-800">
-            {editingTask
-              ? "Edit Task"
-              : "Add New Task"}
-          </h2>
+        {/* Header */}
 
-          <p className="text-sm text-gray-500 mt-1">
-            Fill in the task details below.
-          </p>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200 shrink-0">
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <ClipboardList size={20} strokeWidth={1.75} className="text-blue-600" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {editingTask ? "Edit Task" : "Add New Task"}
+              </h2>
+
+              <p className="text-xs text-slate-500 mt-0.5">
+                Fill in the task details below
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <X size={18} />
+          </button>
+
         </div>
 
-        <div className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Body */}
+
+        <div className="px-8 py-6 overflow-y-auto flex-1">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             {/* Task Title */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Task Title
-              </label>
+              <label className={labelClass}>Task Title</label>
 
               <input
                 type="text"
                 value={title}
-                onChange={(e) =>
-                  setTitle(e.target.value)
-                }
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter task title"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className={inputClass}
               />
             </div>
 
@@ -246,33 +269,25 @@ const AddTaskModal = ({
 
             {!isTeamMember && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Assigned To
-                </label>
+                <label className={labelClass}>Assigned To</label>
 
                 <select
                   value={assignedTo}
                   onChange={(e) =>
-                    setAssignedTo(
-                      Number(e.target.value)
-                    )
+                    setAssignedTo(Number(e.target.value))
                   }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className={`${inputClass} bg-white`}
                 >
-                  <option value={0}>
-                    Select Employee
-                  </option>
+                  <option value={0}>Select Employee</option>
 
-                  {employees.map(
-                    (employee) => (
-                      <option
-                        key={employee.id}
-                        value={employee.user_id}
-                      >
-                        {employee.name}
-                      </option>
-                    )
-                  )}
+                  {employees.map((employee) => (
+                    <option
+                      key={employee.id}
+                      value={employee.user_id}
+                    >
+                      {employee.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -280,42 +295,27 @@ const AddTaskModal = ({
             {/* Priority */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Priority
-              </label>
+              <label className={labelClass}>Priority</label>
 
               <select
                 value={priority}
                 onChange={(e) =>
                   setPriority(
-                    e.target.value as
-                      | "Low"
-                      | "Medium"
-                      | "High"
+                    e.target.value as "Low" | "Medium" | "High"
                   )
                 }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className={`${inputClass} bg-white`}
               >
-                <option value="Low">
-                  Low
-                </option>
-
-                <option value="Medium">
-                  Medium
-                </option>
-
-                <option value="High">
-                  High
-                </option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
               </select>
             </div>
 
             {/* Status */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Status
-              </label>
+              <label className={labelClass}>Status</label>
 
               <select
                 value={status}
@@ -327,132 +327,88 @@ const AddTaskModal = ({
                       | "Completed"
                   )
                 }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className={`${inputClass} bg-white`}
               >
-                <option value="Not Started">
-                  Not Started
-                </option>
-
-                <option value="In Progress">
-                  In Progress
-                </option>
-
-                <option value="Completed">
-                  Completed
-                </option>
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
               </select>
             </div>
 
             {/* Start Date */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Start Date
-              </label>
+              <label className={labelClass}>Start Date</label>
 
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) =>
-                  setStartDate(e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                onChange={(e) => setStartDate(e.target.value)}
+                className={inputClass}
               />
             </div>
 
             {/* Due Date */}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Due Date
-              </label>
+              <label className={labelClass}>Due Date</label>
 
               <input
                 type="date"
                 value={dueDate}
                 min={startDate || undefined}
-                onChange={(e) =>
-                  setDueDate(e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                onChange={(e) => setDueDate(e.target.value)}
+                className={inputClass}
               />
             </div>
 
             {/* Description */}
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Description
-              </label>
+              <label className={labelClass}>Description</label>
 
               <textarea
                 rows={4}
                 value={description}
-                onChange={(e) =>
-                  setDescription(e.target.value)
-                }
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter task description..."
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 resize-none outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className={`${inputClass} resize-none`}
               />
             </div>
 
             {/* Remarks */}
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Remarks
-              </label>
+              <label className={labelClass}>Remarks</label>
 
               <textarea
                 rows={3}
                 value={remarks}
-                onChange={(e) =>
-                  setRemarks(e.target.value)
-                }
+                onChange={(e) => setRemarks(e.target.value)}
                 placeholder="Additional remarks (optional)"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 resize-none outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className={`${inputClass} resize-none`}
               />
             </div>
 
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-4 px-8 py-5 border-t border-gray-200 bg-gray-50 sticky bottom-0">
+        {/* Footer */}
+
+        <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200 bg-slate-50 shrink-0">
 
           <button
             onClick={onClose}
-            className="
-              px-5
-              py-2.5
-              rounded-xl
-              border
-              border-gray-300
-              text-gray-700
-              font-medium
-              hover:bg-gray-100
-              transition
-            "
+            className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-white transition-colors"
           >
             Cancel
           </button>
 
           <button
             onClick={handleSubmit}
-            className="
-              px-6
-              py-2.5
-              rounded-xl
-              bg-blue-600
-              text-white
-              font-semibold
-              hover:bg-blue-700
-              transition
-              shadow-md
-            "
+            className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors"
           >
-            {editingTask
-              ? "Save Changes"
-              : "Create Task"}
+            {editingTask ? "Save Changes" : "Create Task"}
           </button>
 
         </div>

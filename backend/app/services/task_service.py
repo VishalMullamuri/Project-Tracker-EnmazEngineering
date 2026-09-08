@@ -307,9 +307,12 @@ def update_task(
                 member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.created_by == current_user.id,
                 member_employee.user_id == current_user.id,
                 member_employee.is_active.is_(True),
+                (
+                    (Task.created_by == current_user.id)
+                    | (Task.assigned_to == current_user.id)
+                ),
             )
         )
 
@@ -340,16 +343,22 @@ def update_task(
     )
 
     if role == "TEAM_MEMBER":
-        allowed_fields = {
-            "title",
-            "description",
-            "priority",
-            "start_date",
-            "due_date",
-            "status",
-            "remarks",
-            "assigned_to",
-        }
+        if db_task.created_by == current_user.id:
+            allowed_fields = {
+                "title",
+                "description",
+                "priority",
+                "start_date",
+                "due_date",
+                "status",
+                "remarks",
+                "assigned_to",
+            }
+        else:
+            allowed_fields = {
+                "status",
+                "remarks",
+            }
 
         forbidden_fields = sorted(
             set(update_data.keys()) - allowed_fields
