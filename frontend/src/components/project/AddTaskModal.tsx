@@ -169,6 +169,7 @@ const AddTaskModal = ({
             assigned_to: assignedToUserId,
             title,
             description,
+            status,
             priority,
             start_date: startDate,
             due_date: dueDate,
@@ -309,40 +310,38 @@ const AddTaskModal = ({
               </select>
             </div>
 
-            {/* Status - Edit Only */}
+            {/* Status */}
 
-            {editingTask && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Status
-                </label>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Status
+              </label>
 
-                <select
-                  value={status}
-                  onChange={(e) =>
-                    setStatus(
-                      e.target.value as
-                        | "Not Started"
-                        | "In Progress"
-                        | "Completed"
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value="Not Started">
-                    Not Started
-                  </option>
+              <select
+                value={status}
+                onChange={(e) =>
+                  setStatus(
+                    e.target.value as
+                      | "Not Started"
+                      | "In Progress"
+                      | "Completed"
+                  )
+                }
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="Not Started">
+                  Not Started
+                </option>
 
-                  <option value="In Progress">
-                    In Progress
-                  </option>
+                <option value="In Progress">
+                  In Progress
+                </option>
 
-                  <option value="Completed">
-                    Completed
-                  </option>
-                </select>
-              </div>
-            )}
+                <option value="Completed">
+                  Completed
+                </option>
+              </select>
+            </div>
 
             {/* Start Date */}
 

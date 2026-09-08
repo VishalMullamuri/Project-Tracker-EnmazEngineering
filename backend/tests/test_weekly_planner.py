@@ -166,7 +166,7 @@ def test_get_weekly_planner_manager(
     assert data[0]["employee_id"] == employee_user.id
 
 
-def test_get_weekly_planner_team_member_only_sees_own_tasks(
+def test_team_member_cannot_get_weekly_planner(
     client,
     db,
     admin_user,
@@ -174,61 +174,16 @@ def test_get_weekly_planner_team_member_only_sees_own_tasks(
     admin_headers,
     employee_headers,
 ):
-    second_user = User(
-        name="Employee Two",
-        email="employee2@test.com",
-        password=hash_password("Employee2@123"),
-        role=UserRole.TEAM_MEMBER,
-        is_active=True,
-        first_login=False,
-    )
-
-    db.add(second_user)
-    db.flush()
-
-    second_employee = Employee(
-        name=second_user.name,
-        email=second_user.email,
-        phone="9876543211",
-        user_id=second_user.id,
-        created_by=admin_user.id,
-        is_active=True,
-    )
-
-    db.add(second_employee)
-    db.commit()
-    db.refresh(second_employee)
-
-    response = create_weekly_task(
-        client,
-        admin_headers,
-        employee_user.id,
-        task="Employee One Task",
-    )
-
-    assert response.status_code == 200
-
-    response = create_weekly_task(
-        client,
-        admin_headers,
-        second_employee.id,
-        task="Employee Two Task",
-    )
-
-    assert response.status_code == 200
-
     response = client.get(
         "/weekly-planner",
         headers=employee_headers,
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
 
-    data = response.json()
-
-    assert len(data) == 1
-    assert data[0]["task"] == "Employee One Task"
-    assert data[0]["employee_id"] == employee_user.id
+    assert response.json()["detail"] == (
+        "Only admins and managers can modify the weekly planner"
+    )
 
 
 def test_get_weekly_planner_requires_authentication(client):

@@ -15,14 +15,12 @@ const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
-  if (roles) {
-    const user = JSON.parse(
-      localStorage.getItem("user") || "{}"
-    );
+  const user = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
 
-    if (!roles.includes(user.role)) {
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

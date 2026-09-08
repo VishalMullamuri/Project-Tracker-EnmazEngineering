@@ -53,6 +53,57 @@ def create_task(
     return task.json()
 
 
+def create_team_member_task(
+    client,
+    manager_headers,
+    employee_headers,
+    employee_user,
+    db,
+):
+    project = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": "Team Member Task Project",
+            "description": "Testing",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
+    )
+
+    assert project.status_code == 200
+
+    project_id = project.json()["id"]
+
+    from app.models.project_employee import ProjectEmployee
+
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=employee_user.id,
+        )
+    )
+    db.commit()
+
+    task = client.post(
+        "/tasks",
+        headers=employee_headers,
+        json={
+            "project_id": project_id,
+            "assigned_to": employee_user.user_id,
+            "title": "Team Member Task",
+            "description": "Testing Task",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert task.status_code == 200
+
+    return task.json()
+
+
 def test_create_task(
     client,
     manager_headers,
@@ -68,6 +119,65 @@ def test_create_task(
 
     assert task["title"] == "Task 1"
     assert task["status"] == "Not Started"
+
+
+@pytest.mark.parametrize(
+    "task_status",
+    [
+        "Not Started",
+        "In Progress",
+        "Completed",
+    ],
+)
+def test_create_task_with_status(
+    client,
+    manager_headers,
+    employee_user,
+    db,
+    task_status,
+):
+    project = client.post(
+        "/projects",
+        headers=manager_headers,
+        json={
+            "project_name": f"Status Project {task_status}",
+            "description": "Testing",
+            "start_date": str(date.today()),
+            "end_date": str(date.today()),
+        },
+    )
+
+    assert project.status_code == 200
+
+    project_id = project.json()["id"]
+
+    from app.models.project_employee import ProjectEmployee
+
+    db.add(
+        ProjectEmployee(
+            project_id=project_id,
+            employee_id=employee_user.id,
+        )
+    )
+    db.flush()
+
+    response = client.post(
+        "/tasks",
+        headers=manager_headers,
+        json={
+            "project_id": project_id,
+            "assigned_to": employee_user.user_id,
+            "title": "Status Task",
+            "description": "Testing Task",
+            "status": task_status,
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == task_status
 
 
 def test_get_all_tasks(
@@ -196,9 +306,10 @@ def test_team_member_can_update_own_task(
     employee_user,
     db,
 ):
-    task = create_task(
+    task = create_team_member_task(
         client,
         manager_headers,
+        employee_headers,
         employee_user,
         db,
     )
@@ -224,9 +335,10 @@ def test_team_member_can_delete_own_task(
     employee_user,
     db,
 ):
-    task = create_task(
+    task = create_team_member_task(
         client,
         manager_headers,
+        employee_headers,
         employee_user,
         db,
     )

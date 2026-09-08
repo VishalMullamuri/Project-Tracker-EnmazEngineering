@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
-  ClipboardCheck,
   LogOut,
   UserCircle,
   Menu,
@@ -27,10 +26,6 @@ const Layout = ({ children }: LayoutProps) => {
   );
 
   const isManager =
-    user.role === "MANAGER" ||
-    user.role === "ADMIN";
-
-  const isPlannerUser =
     user.role === "MANAGER" ||
     user.role === "ADMIN";
 
@@ -73,21 +68,11 @@ const Layout = ({ children }: LayoutProps) => {
       icon: Users,
       visible: isManager,
     },
-    ...(isPlannerUser
-      ? [
-          {
-            label: "Weekly Planner",
-            path: "/weekly-planner",
-            icon: CalendarDays,
-            visible: true,
-          },
-        ]
-      : []),
     {
-      label: "Daily Worksheet",
-      path: "/daily-worksheet",
-      icon: ClipboardCheck,
-      visible: true,
+      label: "Weekly Planner",
+      path: "/weekly-planner",
+      icon: CalendarDays,
+      visible: isManager,
     },
   ];
 

@@ -118,10 +118,10 @@ def create_task(
         assigned_to=assigned_to,
         title=task.title,
         description=task.description,
+        status=task.status,
         priority=task.priority,
         start_date=task.start_date,
         due_date=task.due_date,
-        status="Not Started",
         created_by=current_user.id,
     )
 
@@ -307,7 +307,7 @@ def update_task(
                 member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.assigned_to == current_user.id,
+                Task.created_by == current_user.id,
                 member_employee.user_id == current_user.id,
                 member_employee.is_active.is_(True),
             )
@@ -451,8 +451,22 @@ def delete_task(
         )
 
     elif current_user.role == UserRole.TEAM_MEMBER:
-        query = query.filter(
-            Task.assigned_to == current_user.id
+        member_employee = aliased(Employee)
+
+        query = (
+            query.join(
+                ProjectEmployee,
+                ProjectEmployee.project_id == Project.id,
+            )
+            .join(
+                member_employee,
+                member_employee.id == ProjectEmployee.employee_id,
+            )
+            .filter(
+                Task.created_by == current_user.id,
+                member_employee.user_id == current_user.id,
+                member_employee.is_active.is_(True),
+            )
         )
 
     else:

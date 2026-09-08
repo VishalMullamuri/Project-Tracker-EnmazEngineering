@@ -27,6 +27,7 @@ class TaskCreate(BaseModel):
     assigned_to: int
     title: str
     description: str | None = None
+    status: TaskStatus = TaskStatus.NOT_STARTED
     priority: TaskPriority
     start_date: date
     due_date: date
@@ -106,4 +107,3 @@ class TaskResponse(BaseModel):
     due_date: date
     created_by: int
     assigned_to_name: str | None = None
-    created_by: int

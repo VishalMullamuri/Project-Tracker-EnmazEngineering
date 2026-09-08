@@ -59,7 +59,7 @@ def get_planner(
     ),
     employee_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_planner_manager),
 ):
     return get_weekly_tasks(
         db=db,
@@ -77,7 +77,7 @@ def get_planner(
 def get_single_planner_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_planner_manager),
 ):
     task = get_weekly_task(
         db,
