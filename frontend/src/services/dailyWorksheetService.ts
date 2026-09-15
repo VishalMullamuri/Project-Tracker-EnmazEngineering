@@ -1,5 +1,22 @@
 import api from "../api/axios";
 
+type DailyWorksheetTaskStatus =
+  | "Not Started"
+  | "In Progress"
+  | "Completed";
+
+interface DailyWorksheetTask {
+  id?: number;
+  title: string;
+  description?: string | null;
+  status: DailyWorksheetTaskStatus;
+  remarks?: string | null;
+}
+
+interface DailyWorksheetUpdateData {
+  tasks: DailyWorksheetTask[];
+}
+
 export const getDailyWorksheet = async (
   date: string,
   employeeId?: number
@@ -15,10 +32,9 @@ export const getDailyWorksheet = async (
     params.employee_id = employeeId;
   }
 
-  const response = await api.get(
-    "/daily-worksheets",
-    { params }
-  );
+  const response = await api.get("/daily-worksheets", {
+    params,
+  });
 
   return response.data;
 };
@@ -26,7 +42,7 @@ export const getDailyWorksheet = async (
 export const updateDailyWorksheet = async (
   date: string,
   employeeId: number | undefined,
-  data: any
+  data: DailyWorksheetUpdateData
 ) => {
   const params: {
     date: string;
@@ -39,11 +55,9 @@ export const updateDailyWorksheet = async (
     params.employee_id = employeeId;
   }
 
-  const response = await api.put(
-    "/daily-worksheets",
-    data,
-    { params }
-  );
+  const response = await api.put("/daily-worksheets", data, {
+    params,
+  });
 
   return response.data;
 };

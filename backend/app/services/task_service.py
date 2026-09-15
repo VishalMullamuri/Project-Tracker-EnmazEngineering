@@ -504,3 +504,5 @@ def delete_task(
     db.commit()
 
     return True
+
+    

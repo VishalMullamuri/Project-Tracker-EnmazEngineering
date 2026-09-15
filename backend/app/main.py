@@ -11,6 +11,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api import user
 from app.api.auth import router as auth_router
+from app.api.daily_worksheet import (
+    router as daily_worksheet_router,
+)
 from app.api.dashboard import router as dashboard_router
 from app.api.project import router as project_router
 from app.api.project_employee import router as project_employee_router
@@ -144,6 +147,7 @@ app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(task_router)
 app.include_router(weekly_planner_router)
+app.include_router(daily_worksheet_router)
 app.include_router(dashboard_router)
 app.include_router(user.router)
 app.include_router(employee_router)

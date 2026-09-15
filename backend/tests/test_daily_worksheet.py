@@ -1,6 +1,8 @@
+# backend/tests/test_daily_worksheet.py
 
 from app.core.enums import UserRole
 from app.core.security import hash_password
+from app.models.employee import Employee
 from app.models.user import User
 
 WORKSHEET_DATE = "2026-09-09"
@@ -32,11 +34,11 @@ def test_create_daily_worksheet(
     client,
     employee_headers,
 ):
-    response = client.post(
+    response = client.put(
         "/daily-worksheets",
+        params={"date": WORKSHEET_DATE},
         headers=employee_headers,
         json={
-            "worksheet_date": WORKSHEET_DATE,
             "tasks": [
                 {
                     "title": "Complete daily work",
@@ -57,30 +59,31 @@ def test_create_daily_worksheet(
     assert data["tasks"][0]["title"] == "Complete daily work"
 
 
-def test_create_duplicate_daily_worksheet_returns_conflict(
+def test_update_existing_daily_worksheet_is_allowed(
     client,
     employee_headers,
 ):
     payload = {
-        "worksheet_date": WORKSHEET_DATE,
         "tasks": [],
     }
 
-    first_response = client.post(
+    first_response = client.put(
         "/daily-worksheets",
+        params={"date": WORKSHEET_DATE},
         headers=employee_headers,
         json=payload,
     )
 
     assert first_response.status_code == 200
 
-    second_response = client.post(
+    second_response = client.put(
         "/daily-worksheets",
+        params={"date": WORKSHEET_DATE},
         headers=employee_headers,
         json=payload,
     )
 
-    assert second_response.status_code == 409
+    assert second_response.status_code == 200
 
 
 def test_employee_cannot_view_another_employee_worksheet(
@@ -99,25 +102,38 @@ def test_employee_cannot_view_another_employee_worksheet(
     )
 
     db.add(other_user)
+    db.flush()
+
+    other_employee = Employee(
+        name=other_user.name,
+        email=other_user.email,
+        phone="9999999999",
+        user_id=other_user.id,
+        created_by=employee_user.user_id,
+        is_active=True,
+    )
+
+    db.add(other_employee)
     db.commit()
-    db.refresh(other_user)
+    db.refresh(other_employee)
 
     response = client.get(
         "/daily-worksheets",
         headers=employee_headers,
         params={
             "date": WORKSHEET_DATE,
-            "employee_id": other_user.id,
+            "employee_id": other_employee.id,
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_employee_cannot_update_another_employee_worksheet(
     client,
     db,
     employee_headers,
+    employee_user,
 ):
     other_user = User(
         name="Other Employee",
@@ -129,15 +145,27 @@ def test_employee_cannot_update_another_employee_worksheet(
     )
 
     db.add(other_user)
+    db.flush()
+
+    other_employee = Employee(
+        name=other_user.name,
+        email=other_user.email,
+        phone="9999999999",
+        user_id=other_user.id,
+        created_by=employee_user.user_id,
+        is_active=True,
+    )
+
+    db.add(other_employee)
     db.commit()
-    db.refresh(other_user)
+    db.refresh(other_employee)
 
     response = client.put(
         "/daily-worksheets",
         headers=employee_headers,
         params={
             "date": WORKSHEET_DATE,
-            "employee_id": other_user.id,
+            "employee_id": other_employee.id,
         },
         json={
             "tasks": [
@@ -151,7 +179,7 @@ def test_employee_cannot_update_another_employee_worksheet(
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_employee_can_update_own_daily_worksheet(

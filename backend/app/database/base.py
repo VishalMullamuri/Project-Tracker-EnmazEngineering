@@ -3,6 +3,12 @@ Do not delete the imports below — Alembic autogenerate depends on them.
 """
 
 from app.database.database import Base as Base
+from app.models.daily_worksheet import (
+    DailyWorksheet as DailyWorksheet,
+)
+from app.models.daily_worksheet import (
+    DailyWorksheetTask as DailyWorksheetTask,
+)
 from app.models.employee import Employee as Employee
 from app.models.project import Project as Project
 from app.models.project_employee import (

@@ -1,20 +1,21 @@
-# backend/app/services/daily_worksheet_service.py
-
+import logging
 from datetime import date
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.enums import UserRole
+from app.core.permissions import visible_employee_ids
 from app.models.daily_worksheet import (
     DailyWorksheet,
     DailyWorksheetTask,
 )
+from app.models.employee import Employee
 from app.models.user import User
-from app.schemas.daily_worksheet import (
-    DailyWorksheetCreate,
-    DailyWorksheetUpdate,
-)
+from app.schemas.daily_worksheet import DailyWorksheetUpdate
+
+logger = logging.getLogger(__name__)
 
 
 def get_daily_worksheet(
@@ -23,23 +24,85 @@ def get_daily_worksheet(
     worksheet_date: date,
     employee_id: int | None = None,
 ):
+    current_employee = (
+        db.query(Employee)
+        .filter(
+            Employee.user_id == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not current_employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee not found",
+        )
+
     target_employee_id = (
         employee_id
         if employee_id is not None
-        else current_user.id
+        else current_employee.id
     )
 
-    if target_employee_id != current_user.id:
-        if current_user.role not in (
-            UserRole.ADMIN,
-            UserRole.MANAGER,
-        ):
+    if target_employee_id != current_employee.id:
+        target_employee = (
+            db.query(Employee)
+            .filter(
+                Employee.id == target_employee_id,
+                Employee.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not target_employee:
             raise HTTPException(
-                status_code=403,
-                detail=(
-                    "Only admins and managers can view "
-                    "another employee's worksheet"
-                ),
+                status_code=404,
+                detail="Employee not found",
+            )
+
+        target_user = (
+            db.query(User)
+            .filter(
+                User.id == target_employee.user_id,
+                User.is_active.is_(True),
+                User.role == UserRole.TEAM_MEMBER,
+            )
+            .first()
+        )
+
+        if not target_user:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found",
+            )
+
+        if current_user.role == UserRole.MANAGER:
+            employee = (
+                db.query(Employee)
+                .filter(
+                    Employee.id == target_employee_id,
+                    Employee.is_active.is_(True),
+                    Employee.id.in_(
+                        visible_employee_ids(
+                            db,
+                            current_user,
+                        )
+                    ),
+                )
+                .first()
+            )
+
+            if not employee:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Employee not found",
+                )
+
+        elif current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found",
             )
 
     worksheet = (
@@ -54,48 +117,6 @@ def get_daily_worksheet(
     return worksheet
 
 
-def create_daily_worksheet(
-    db: Session,
-    current_user: User,
-    worksheet_date: date,
-    data: DailyWorksheetCreate,
-):
-    worksheet = get_daily_worksheet(
-        db=db,
-        current_user=current_user,
-        worksheet_date=worksheet_date,
-    )
-
-    if worksheet:
-        raise HTTPException(
-            status_code=409,
-            detail="Daily worksheet already exists for this date",
-        )
-
-    worksheet = DailyWorksheet(
-        employee_id=current_user.id,
-        worksheet_date=worksheet_date,
-    )
-
-    db.add(worksheet)
-    db.flush()
-
-    for task_data in data.tasks:
-        task = DailyWorksheetTask(
-            worksheet_id=worksheet.id,
-            title=task_data.title,
-            description=task_data.description,
-            status=task_data.status,
-            remarks=task_data.remarks,
-        )
-        db.add(task)
-
-    db.commit()
-    db.refresh(worksheet)
-
-    return worksheet
-
-
 def update_daily_worksheet(
     db: Session,
     current_user: User,
@@ -103,23 +124,85 @@ def update_daily_worksheet(
     data: DailyWorksheetUpdate,
     employee_id: int | None = None,
 ):
+    current_employee = (
+        db.query(Employee)
+        .filter(
+            Employee.user_id == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not current_employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee not found",
+        )
+
     target_employee_id = (
         employee_id
         if employee_id is not None
-        else current_user.id
+        else current_employee.id
     )
 
-    if target_employee_id != current_user.id:
-        if current_user.role not in (
-            UserRole.ADMIN,
-            UserRole.MANAGER,
-        ):
+    if target_employee_id != current_employee.id:
+        target_employee = (
+            db.query(Employee)
+            .filter(
+                Employee.id == target_employee_id,
+                Employee.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not target_employee:
             raise HTTPException(
-                status_code=403,
-                detail=(
-                    "Only admins and managers can update another "
-                    "employee's worksheet"
-                ),
+                status_code=404,
+                detail="Employee not found",
+            )
+
+        target_user = (
+            db.query(User)
+            .filter(
+                User.id == target_employee.user_id,
+                User.is_active.is_(True),
+                User.role == UserRole.TEAM_MEMBER,
+            )
+            .first()
+        )
+
+        if not target_user:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found",
+            )
+
+        if current_user.role == UserRole.MANAGER:
+            employee = (
+                db.query(Employee)
+                .filter(
+                    Employee.id == target_employee_id,
+                    Employee.is_active.is_(True),
+                    Employee.id.in_(
+                        visible_employee_ids(
+                            db,
+                            current_user,
+                        )
+                    ),
+                )
+                .first()
+            )
+
+            if not employee:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Employee not found",
+                )
+
+        elif current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found",
             )
 
     worksheet = (
@@ -171,8 +254,25 @@ def update_daily_worksheet(
             )
             db.add(task)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Daily worksheet already exists for this date",
+        ) from None
+
     db.refresh(worksheet)
+
+    logger.info(
+        "Daily worksheet updated: "
+        "actor_user_id=%s target_worksheet_id=%s "
+        "target_employee_id=%s",
+        current_user.id,
+        worksheet.id,
+        worksheet.employee_id,
+    )
 
     return worksheet
 
@@ -182,6 +282,21 @@ def delete_daily_worksheet_task(
     current_user: User,
     task_id: int,
 ):
+    current_employee = (
+        db.query(Employee)
+        .filter(
+            Employee.user_id == current_user.id,
+            Employee.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not current_employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee not found",
+        )
+
     task = (
         db.query(DailyWorksheetTask)
         .join(
@@ -208,18 +323,44 @@ def delete_daily_worksheet_task(
         .first()
     )
 
-    if worksheet.employee_id != current_user.id:
-        if current_user.role not in (
-            UserRole.ADMIN,
-            UserRole.MANAGER,
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    "You do not have permission to delete "
-                    "this worksheet task"
-                ),
+    if worksheet.employee_id != current_employee.id:
+        if current_user.role == UserRole.MANAGER:
+            employee = (
+                db.query(Employee)
+                .filter(
+                    Employee.id == worksheet.employee_id,
+                    Employee.is_active.is_(True),
+                    Employee.id.in_(
+                        visible_employee_ids(
+                            db,
+                            current_user,
+                        )
+                    ),
+                )
+                .first()
             )
+
+            if not employee:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Daily worksheet task not found",
+                )
+
+        elif current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=404,
+                detail="Daily worksheet task not found",
+            )
+
+    logger.info(
+        "Daily worksheet task deleted: "
+        "actor_user_id=%s target_task_id=%s "
+        "target_worksheet_id=%s target_employee_id=%s",
+        current_user.id,
+        task.id,
+        worksheet.id,
+        worksheet.employee_id,
+    )
 
     db.delete(task)
     db.commit()

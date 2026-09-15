@@ -58,11 +58,11 @@ const TaskTable = ({
     isManager || isTeamMember;
 
   const canModifyTask = (task: Task) =>
-    isManager ||
-    (
-      isTeamMember &&
-      task.created_by === user.id
-    );
+  isManager ||
+  (
+    isTeamMember &&
+    task.created_by === Number(user.id)
+  );
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("All");

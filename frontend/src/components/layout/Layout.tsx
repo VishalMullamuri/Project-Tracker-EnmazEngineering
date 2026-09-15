@@ -74,6 +74,12 @@ const Layout = ({ children }: LayoutProps) => {
       icon: CalendarDays,
       visible: isManager,
     },
+    {
+      label: "Daily Worksheet",
+      path: "/daily-worksheet",
+      icon: CalendarDays,
+      visible: true,
+    },
   ];
 
   return (

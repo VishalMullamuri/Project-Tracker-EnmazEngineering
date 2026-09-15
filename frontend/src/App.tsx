@@ -9,6 +9,7 @@ import EmployeeDetails from "./pages/EmployeeDetails";
 import ChangePassword from "./pages/ChangePassword";
 import MyWork from "./pages/MyWork";
 import WeeklyPlanner from "./pages/WeeklyPlanner";
+import DailyWorksheet from "./pages/DailyWorksheet/DailyWorksheet";
 
 function App() {
   return (
@@ -34,6 +35,28 @@ function App() {
           element={
             <ProtectedRoute>
               <MyWork />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Daily Worksheet */}
+
+        <Route
+          path="/daily-worksheet"
+          element={
+            <ProtectedRoute>
+              <DailyWorksheet />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Employee Daily Worksheet — Admin / Manager only */}
+
+        <Route
+          path="/employee/:employeeId/worksheet"
+          element={
+            <ProtectedRoute roles={["ADMIN", "MANAGER"]}>
+              <DailyWorksheet />
             </ProtectedRoute>
           }
         />

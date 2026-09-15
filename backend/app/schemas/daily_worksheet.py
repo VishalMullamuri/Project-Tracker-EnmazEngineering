@@ -1,13 +1,22 @@
 from datetime import date
+from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class DailyWorksheetTaskStatus(str, Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    COMPLETED = "Completed"
 
 
 class DailyWorksheetTaskBase(BaseModel):
-    title: str
+    title: str = Field(..., min_length=1)
     description: str | None = None
-    status: str = "Not Started"
+    status: DailyWorksheetTaskStatus = DailyWorksheetTaskStatus.NOT_STARTED
     remarks: str | None = None
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class DailyWorksheetTaskCreate(DailyWorksheetTaskBase):
@@ -24,11 +33,6 @@ class DailyWorksheetTaskResponse(DailyWorksheetTaskBase):
     model_config = ConfigDict(
         from_attributes=True,
     )
-
-
-class DailyWorksheetCreate(BaseModel):
-    worksheet_date: date
-    tasks: list[DailyWorksheetTaskCreate] = []
 
 
 class DailyWorksheetUpdate(BaseModel):
