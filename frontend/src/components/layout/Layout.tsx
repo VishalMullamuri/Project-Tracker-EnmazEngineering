@@ -29,6 +29,8 @@ const Layout = ({ children }: LayoutProps) => {
     user.role === "MANAGER" ||
     user.role === "ADMIN";
 
+  const isTeamMember = user.role === "TEAM_MEMBER";
+
   const handleLogout = () => {
     const confirmLogout = window.confirm(
       "Are you sure you want to logout?"
@@ -78,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
       label: "Daily Worksheet",
       path: "/daily-worksheet",
       icon: CalendarDays,
-      visible: true,
+      visible: isTeamMember,
     },
   ];
 

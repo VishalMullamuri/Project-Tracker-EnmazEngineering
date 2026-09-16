@@ -294,10 +294,6 @@ const DailyWorksheet = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* =====================================================
-            HEADING
-        ====================================================== */}
-
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
@@ -351,10 +347,6 @@ const DailyWorksheet = () => {
           </div>
         </div>
 
-        {/* =====================================================
-            ERROR MESSAGE
-        ====================================================== */}
-
         {error && (
           <div className="px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 flex items-center gap-2">
             <AlertCircle
@@ -364,10 +356,6 @@ const DailyWorksheet = () => {
             {error}
           </div>
         )}
-
-        {/* =====================================================
-            SUMMARY CARDS
-        ====================================================== */}
 
         <div className="grid grid-cols-4 gap-5">
           <SummaryCard
@@ -422,10 +410,6 @@ const DailyWorksheet = () => {
             iconBg="bg-orange-100"
           />
         </div>
-
-        {/* =====================================================
-            WORKSHEET TABLE
-        ====================================================== */}
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 flex-wrap gap-3">
@@ -609,10 +593,6 @@ const DailyWorksheet = () => {
             </div>
           )}
         </div>
-
-        {/* =====================================================
-            ACTIONS
-        ====================================================== */}
 
         <div className="flex justify-end">
           <button

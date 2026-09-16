@@ -404,3 +404,16 @@ def test_delete_nonexistent_daily_worksheet_task(
     )
 
     assert response.status_code == 404
+
+def test_get_empty_daily_worksheet_returns_none(
+    client,
+    employee_headers,
+):
+    response = client.get(
+        "/daily-worksheets",
+        headers=employee_headers,
+        params={"date": "2099-12-31"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() is None

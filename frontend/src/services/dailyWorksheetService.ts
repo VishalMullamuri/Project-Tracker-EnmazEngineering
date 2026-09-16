@@ -13,6 +13,14 @@ export interface DailyWorksheetTask {
   remarks: string | null;
 }
 
+export interface DailyWorksheetResponse {
+  employee_name: string;
+  id: number;
+  employee_id: number;
+  worksheet_date: string;
+  tasks: DailyWorksheetTask[];
+}
+
 export interface DailyWorksheetUpdateData {
   tasks: DailyWorksheetTask[];
 }
@@ -20,21 +28,18 @@ export interface DailyWorksheetUpdateData {
 export const getDailyWorksheet = async (
   date: string,
   employeeId?: number
-) => {
-  const params: {
-    date: string;
-    employee_id?: number;
-  } = {
-    date,
-  };
-
-  if (employeeId !== undefined) {
-    params.employee_id = employeeId;
-  }
-
-  const response = await api.get("/daily-worksheets", {
-    params,
-  });
+): Promise<DailyWorksheetResponse | null> => {
+  const response = await api.get<DailyWorksheetResponse | null>(
+    "/daily-worksheets",
+    {
+      params: {
+        date,
+        ...(employeeId !== undefined
+          ? { employee_id: employeeId }
+          : {}),
+      },
+    }
+  );
 
   return response.data;
 };
@@ -43,29 +48,27 @@ export const updateDailyWorksheet = async (
   date: string,
   employeeId: number | undefined,
   data: DailyWorksheetUpdateData
-) => {
-  const params: {
-    date: string;
-    employee_id?: number;
-  } = {
-    date,
-  };
-
-  if (employeeId !== undefined) {
-    params.employee_id = employeeId;
-  }
-
-  const response = await api.put("/daily-worksheets", data, {
-    params,
-  });
+): Promise<DailyWorksheetResponse> => {
+  const response = await api.put<DailyWorksheetResponse>(
+    "/daily-worksheets",
+    data,
+    {
+      params: {
+        date,
+        ...(employeeId !== undefined
+          ? { employee_id: employeeId }
+          : {}),
+      },
+    }
+  );
 
   return response.data;
 };
 
 export const deleteDailyWorksheet = async (
-  taskId: string | number
-) => {
-  const response = await api.delete(
+  taskId: number
+): Promise<{ message: string }> => {
+  const response = await api.delete<{ message: string }>(
     `/daily-worksheets/tasks/${taskId}`
   );
 
