@@ -39,6 +39,14 @@ const statusSelectStyle: Record<DailyWorksheetTaskStatus, string> = {
 const inputClass =
   "w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-slate-400";
 
+const formatLocalDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 const DailyWorksheet = () => {
   const { employeeId } = useParams<{
     employeeId: string;
@@ -49,7 +57,7 @@ const DailyWorksheet = () => {
     : undefined;
 
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    formatLocalDate(new Date())
   );
 
   const [worksheet, setWorksheet] =
@@ -61,6 +69,7 @@ const DailyWorksheet = () => {
 
   const loadWorksheet = useCallback(async () => {
     try {
+      setLoading(true);
       setError("");
 
       const data = await getDailyWorksheet(
@@ -72,6 +81,8 @@ const DailyWorksheet = () => {
     } catch (err) {
       console.error(err);
       setError("Unable to load the daily worksheet.");
+    } finally {
+      setLoading(false);
     }
   }, [selectedDate, worksheetEmployeeId]);
 
@@ -80,10 +91,10 @@ const DailyWorksheet = () => {
 
     const load = async () => {
       setLoading(true);
+      setError("");
+      setWorksheet(null);
 
       try {
-        setError("");
-
         const data = await getDailyWorksheet(
           selectedDate,
           worksheetEmployeeId
@@ -93,8 +104,10 @@ const DailyWorksheet = () => {
           setWorksheet(data);
         }
       } catch (err) {
+        console.error(err);
+
         if (!cancelled) {
-          console.error(err);
+          setWorksheet(null);
           setError("Unable to load the daily worksheet.");
         }
       } finally {
@@ -111,30 +124,28 @@ const DailyWorksheet = () => {
     };
   }, [selectedDate, worksheetEmployeeId]);
 
+  const changeDate = (days: number) => {
+    const [year, month, day] = selectedDate
+      .split("-")
+      .map(Number);
+
+    const date = new Date(year, month - 1, day);
+
+    date.setDate(date.getDate() + days);
+
+    setSelectedDate(formatLocalDate(date));
+  };
+
   const handlePreviousDay = () => {
-    const date = new Date(selectedDate);
-
-    date.setDate(date.getDate() - 1);
-
-    setSelectedDate(
-      date.toISOString().split("T")[0]
-    );
+    changeDate(-1);
   };
 
   const handleNextDay = () => {
-    const date = new Date(selectedDate);
-
-    date.setDate(date.getDate() + 1);
-
-    setSelectedDate(
-      date.toISOString().split("T")[0]
-    );
+    changeDate(1);
   };
 
   const handleToday = () => {
-    setSelectedDate(
-      new Date().toISOString().split("T")[0]
-    );
+    setSelectedDate(formatLocalDate(new Date()));
   };
 
   const handleTaskChange = (

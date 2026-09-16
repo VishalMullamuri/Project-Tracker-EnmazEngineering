@@ -40,6 +40,8 @@ def _resolve_target_employee(
     else:
         target_employee_id = employee_id
 
+    target_employee = current_employee
+
     if current_employee is not None and target_employee_id == current_employee.id:
         return current_employee
 
@@ -120,10 +122,11 @@ def get_daily_worksheet(
     )
 
     if not worksheet:
-        raise HTTPException(
-            status_code=404,
-            detail="Daily worksheet not found",
+        worksheet = DailyWorksheet(
+            employee_id=target_employee.id,
+            worksheet_date=worksheet_date,
         )
+        worksheet.employee = target_employee
 
     return worksheet
 
