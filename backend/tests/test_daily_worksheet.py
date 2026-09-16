@@ -1,5 +1,7 @@
 # backend/tests/test_daily_worksheet.py
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.enums import UserRole
 from app.core.security import hash_password
 from app.models.employee import Employee
@@ -21,6 +23,15 @@ def test_get_daily_worksheet_for_current_employee(
     client,
     employee_headers,
 ):
+    create_response = client.put(
+        "/daily-worksheets",
+        headers=employee_headers,
+        params={"date": WORKSHEET_DATE},
+        json={"tasks": []},
+    )
+
+    assert create_response.status_code == 200
+
     response = client.get(
         "/daily-worksheets",
         headers=employee_headers,
@@ -210,6 +221,167 @@ def test_employee_can_update_own_daily_worksheet(
     assert len(data["tasks"]) == 1
     assert data["tasks"][0]["title"] == "Updated daily task"
     assert data["tasks"][0]["status"] == "In Progress"
+
+
+def test_admin_can_access_employee_worksheet(
+    client,
+    admin_headers,
+    employee_user,
+):
+    response = client.put(
+        "/daily-worksheets",
+        headers=admin_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": employee_user.id,
+        },
+        json={"tasks": []},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["employee_id"] == employee_user.id
+
+    get_response = client.get(
+        "/daily-worksheets",
+        headers=admin_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": employee_user.id,
+        },
+    )
+
+    assert get_response.status_code == 200
+    assert get_response.json()["employee_id"] == employee_user.id
+
+
+def test_manager_can_access_in_scope_employee_but_not_out_of_scope_employee(
+    client,
+    db,
+    manager_headers,
+    employee_user,
+    project,
+    admin_user,
+):
+    out_of_scope_user = User(
+        name="Other Employee",
+        email="other.employee@test.com",
+        password=hash_password("Employee@123"),
+        role=UserRole.TEAM_MEMBER,
+        is_active=True,
+        first_login=False,
+    )
+    db.add(out_of_scope_user)
+    db.flush()
+
+    out_of_scope_employee = Employee(
+        name=out_of_scope_user.name,
+        email=out_of_scope_user.email,
+        phone="9876543211",
+        user_id=out_of_scope_user.id,
+        created_by=admin_user.id,
+        is_active=True,
+    )
+    db.add(out_of_scope_employee)
+    db.commit()
+    db.refresh(out_of_scope_employee)
+
+    in_scope_response = client.put(
+        "/daily-worksheets",
+        headers=manager_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": employee_user.id,
+        },
+        json={"tasks": []},
+    )
+
+    assert in_scope_response.status_code == 200
+
+    out_of_scope_response = client.get(
+        "/daily-worksheets",
+        headers=manager_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": out_of_scope_employee.id,
+        },
+    )
+
+    assert out_of_scope_response.status_code == 404
+
+
+def test_daily_worksheet_conflict_returns_409(
+    client,
+    db,
+    employee_headers,
+    monkeypatch,
+):
+    def raise_integrity_error():
+        raise IntegrityError(
+            "INSERT INTO daily_worksheets",
+            {},
+            Exception("duplicate key"),
+        )
+
+    monkeypatch.setattr(db, "commit", raise_integrity_error)
+
+    response = client.put(
+        "/daily-worksheets",
+        headers=employee_headers,
+        params={"date": WORKSHEET_DATE},
+        json={"tasks": []},
+    )
+
+    assert response.status_code == 409
+
+
+def test_daily_worksheet_uses_employee_id_not_user_id(
+    client,
+    admin_headers,
+    db,
+    employee_user,
+):
+    if employee_user.id == employee_user.user_id:
+        replacement_user = User(
+            name="Worksheet ID Test User",
+            email="worksheet.id.test@test.com",
+            password=hash_password("Employee@123"),
+            role=UserRole.TEAM_MEMBER,
+            is_active=True,
+            first_login=False,
+        )
+        db.add(replacement_user)
+        db.flush()
+
+        employee_user.user_id = replacement_user.id
+        db.commit()
+        db.refresh(employee_user)
+
+    assert employee_user.id != employee_user.user_id
+
+    response = client.put(
+        "/daily-worksheets",
+        headers=admin_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": employee_user.id,
+        },
+        json={"tasks": []},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["employee_id"] == employee_user.id
+
+    get_response = client.get(
+        "/daily-worksheets",
+        headers=admin_headers,
+        params={
+            "date": WORKSHEET_DATE,
+            "employee_id": employee_user.id,
+        },
+    )
+
+    assert get_response.status_code == 200
+    assert get_response.json()["employee_id"] == employee_user.id
 
 
 def test_delete_daily_worksheet_task_requires_authentication(

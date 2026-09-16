@@ -1,19 +1,19 @@
 import api from "../api/axios";
 
-type DailyWorksheetTaskStatus =
+export type DailyWorksheetTaskStatus =
   | "Not Started"
   | "In Progress"
   | "Completed";
 
-interface DailyWorksheetTask {
+export interface DailyWorksheetTask {
   id?: number;
   title: string;
-  description?: string | null;
+  description: string | null;
   status: DailyWorksheetTaskStatus;
-  remarks?: string | null;
+  remarks: string | null;
 }
 
-interface DailyWorksheetUpdateData {
+export interface DailyWorksheetUpdateData {
   tasks: DailyWorksheetTask[];
 }
 

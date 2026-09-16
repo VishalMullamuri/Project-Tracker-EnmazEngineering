@@ -385,7 +385,7 @@ const EmployeeDetails = () => {
 
             <button
               onClick={() =>
-                navigate(`/employee/${employee.user_id}/worksheet`)
+                navigate(`/employee/${employee.id}/worksheet`)
               }
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors"
             >

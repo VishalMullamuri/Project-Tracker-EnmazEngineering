@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "../../components/layout/Layout";
 import SummaryCard from "../../components/dashboard/SummaryCard";
+import type {
+  DailyWorksheetTask,
+  DailyWorksheetTaskStatus,
+} from "../../services/dailyWorksheetService";
+
 import {
   getDailyWorksheet,
   updateDailyWorksheet,
@@ -20,30 +25,15 @@ import {
   Trash2,
 } from "lucide-react";
 
-type TaskStatus =
-  | "NOT_STARTED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "BLOCKED";
-
-interface DailyWorksheetTask {
-  id?: number;
-  title: string;
-  description?: string;
-  status: string;
-  remarks?: string;
-}
-
 interface DailyWorksheetData {
   employee_name?: string;
   tasks: DailyWorksheetTask[];
 }
 
-const statusSelectStyle: Record<TaskStatus, string> = {
-  NOT_STARTED: "text-slate-600",
-  IN_PROGRESS: "text-blue-600",
-  COMPLETED: "text-green-600",
-  BLOCKED: "text-red-600",
+const statusSelectStyle: Record<DailyWorksheetTaskStatus, string> = {
+  "Not Started": "text-slate-600",
+  "In Progress": "text-blue-600",
+  Completed: "text-green-600",
 };
 
 const inputClass =
@@ -69,13 +59,8 @@ const DailyWorksheet = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadWorksheet();
-  }, [selectedDate, worksheetEmployeeId]);
-
-  const loadWorksheet = async () => {
+  const loadWorksheet = useCallback(async () => {
     try {
-      setLoading(true);
       setError("");
 
       const data = await getDailyWorksheet(
@@ -87,10 +72,44 @@ const DailyWorksheet = () => {
     } catch (err) {
       console.error(err);
       setError("Unable to load the daily worksheet.");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [selectedDate, worksheetEmployeeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+
+      try {
+        setError("");
+
+        const data = await getDailyWorksheet(
+          selectedDate,
+          worksheetEmployeeId
+        );
+
+        if (!cancelled) {
+          setWorksheet(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error(err);
+          setError("Unable to load the daily worksheet.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, worksheetEmployeeId]);
 
   const handlePreviousDay = () => {
     const date = new Date(selectedDate);
@@ -134,7 +153,10 @@ const DailyWorksheet = () => {
           task.id === taskId
             ? {
                 ...task,
-                [field]: value,
+                [field]:
+                  field === "status"
+                    ? (value as DailyWorksheetTaskStatus)
+                    : value,
               }
             : task
         ),
@@ -146,7 +168,7 @@ const DailyWorksheet = () => {
     const newTask: DailyWorksheetTask = {
       title: "",
       description: "",
-      status: "NOT_STARTED",
+      status: "Not Started",
       remarks: "",
     };
 
@@ -189,7 +211,7 @@ const DailyWorksheet = () => {
         return;
       }
 
-      await deleteDailyWorksheet(task.id)
+      await deleteDailyWorksheet(task.id);
 
       setWorksheet((previous) => {
         if (!previous) {
@@ -218,15 +240,16 @@ const DailyWorksheet = () => {
       setSaving(true);
       setError("");
 
-      const tasks = worksheet.tasks.map((task) => ({
-        ...(typeof task.id === "number"
-          ? { id: task.id }
-          : {}),
-        title: task.title,
-        description: task.description ?? null,
-        status: task.status,
-        remarks: task.remarks ?? null,
-      }));
+      const tasks: DailyWorksheetTask[] =
+        worksheet.tasks.map((task) => ({
+          ...(typeof task.id === "number"
+            ? { id: task.id }
+            : {}),
+          title: task.title,
+          description: task.description ?? null,
+          status: task.status,
+          remarks: task.remarks ?? null,
+        }));
 
       await updateDailyWorksheet(
         selectedDate,
@@ -246,29 +269,25 @@ const DailyWorksheet = () => {
   const tasks = worksheet?.tasks ?? [];
 
   const completedTasks = tasks.filter(
-    (task) => task.status === "COMPLETED"
+    (task) => task.status === "Completed"
   ).length;
 
   const inProgressTasks = tasks.filter(
-    (task) => task.status === "IN_PROGRESS"
+    (task) => task.status === "In Progress"
   ).length;
 
   const pendingTasks = tasks.filter(
-    (task) =>
-      task.status === "NOT_STARTED" ||
-      task.status === "BLOCKED"
+    (task) => task.status === "Not Started"
   ).length;
 
   return (
     <Layout>
       <div className="space-y-6">
-
         {/* =====================================================
             HEADING
         ====================================================== */}
 
         <div className="flex items-center justify-between flex-wrap gap-4">
-
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               Daily Worksheet
@@ -280,7 +299,6 @@ const DailyWorksheet = () => {
           </div>
 
           <div className="flex items-center gap-2">
-
             <button
               type="button"
               onClick={handlePreviousDay}
@@ -319,9 +337,7 @@ const DailyWorksheet = () => {
             >
               Today
             </button>
-
           </div>
-
         </div>
 
         {/* =====================================================
@@ -343,7 +359,6 @@ const DailyWorksheet = () => {
         ====================================================== */}
 
         <div className="grid grid-cols-4 gap-5">
-
           <SummaryCard
             title="Planned"
             value={tasks.length}
@@ -395,7 +410,6 @@ const DailyWorksheet = () => {
             }
             iconBg="bg-orange-100"
           />
-
         </div>
 
         {/* =====================================================
@@ -403,9 +417,7 @@ const DailyWorksheet = () => {
         ====================================================== */}
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 flex-wrap gap-3">
-
             <div>
               <h2 className="text-base font-bold text-slate-900">
                 Today's Work
@@ -424,21 +436,16 @@ const DailyWorksheet = () => {
             >
               + Add Task
             </button>
-
           </div>
 
           {loading ? (
-
             <div className="py-14 flex flex-col items-center justify-center">
               <p className="text-sm text-slate-500">
                 Loading worksheet...
               </p>
             </div>
-
           ) : tasks.length === 0 ? (
-
             <div className="py-14 flex flex-col items-center justify-center">
-
               <ClipboardList
                 size={40}
                 strokeWidth={1.5}
@@ -452,19 +459,12 @@ const DailyWorksheet = () => {
               <p className="text-xs text-slate-500 mt-1">
                 Add a task to start logging today's work.
               </p>
-
             </div>
-
           ) : (
-
             <div className="w-full overflow-x-auto">
-
               <table className="w-full table-fixed">
-
                 <thead className="bg-slate-50">
-
                   <tr className="text-[11px] uppercase tracking-wider text-slate-500">
-
                     <th className="py-3 px-5 text-center w-16 font-semibold">
                       Sl.No.
                     </th>
@@ -484,15 +484,11 @@ const DailyWorksheet = () => {
                     <th className="py-3 px-5 text-center w-20 font-semibold">
                       Action
                     </th>
-
                   </tr>
-
                 </thead>
 
                 <tbody>
-
                   {tasks.map((task, index) => (
-
                     <tr
                       key={
                         typeof task.id === "number"
@@ -501,15 +497,12 @@ const DailyWorksheet = () => {
                       }
                       className="border-b border-slate-100 last:border-b-0 hover:bg-blue-50/40 transition-colors"
                     >
-
                       <td className="py-4 px-5 text-center text-sm text-slate-500 align-top">
                         {index + 1}
                       </td>
 
                       <td className="py-4 px-5 align-top">
-
                         {typeof task.id !== "number" ? (
-
                           <input
                             type="text"
                             placeholder="Enter task..."
@@ -523,9 +516,7 @@ const DailyWorksheet = () => {
                             }
                             className={inputClass}
                           />
-
                         ) : (
-
                           <div>
                             <div className="text-sm font-semibold text-slate-800 leading-snug">
                               {task.title}
@@ -537,13 +528,10 @@ const DailyWorksheet = () => {
                               </div>
                             )}
                           </div>
-
                         )}
-
                       </td>
 
                       <td className="py-4 px-5 align-top">
-
                         <select
                           value={task.status}
                           onChange={(event) =>
@@ -554,34 +542,25 @@ const DailyWorksheet = () => {
                             )
                           }
                           className={`${inputClass} bg-white font-medium ${
-                            statusSelectStyle[
-                              task.status as TaskStatus
-                            ] ?? "text-slate-600"
+                            statusSelectStyle[task.status] ??
+                            "text-slate-600"
                           }`}
                         >
-
-                          <option value="NOT_STARTED">
+                          <option value="Not Started">
                             Not Started
                           </option>
 
-                          <option value="IN_PROGRESS">
+                          <option value="In Progress">
                             In Progress
                           </option>
 
-                          <option value="COMPLETED">
+                          <option value="Completed">
                             Completed
                           </option>
-
-                          <option value="BLOCKED">
-                            Blocked
-                          </option>
-
                         </select>
-
                       </td>
 
                       <td className="py-4 px-5 align-top">
-
                         <textarea
                           value={task.remarks ?? ""}
                           placeholder="Enter comments..."
@@ -595,11 +574,9 @@ const DailyWorksheet = () => {
                           rows={2}
                           className={`${inputClass} resize-y min-h-[70px]`}
                         />
-
                       </td>
 
                       <td className="py-4 px-5 text-center align-top">
-
                         <button
                           type="button"
                           onClick={() =>
@@ -613,21 +590,13 @@ const DailyWorksheet = () => {
                             strokeWidth={2}
                           />
                         </button>
-
                       </td>
-
                     </tr>
-
                   ))}
-
                 </tbody>
-
               </table>
-
             </div>
-
           )}
-
         </div>
 
         {/* =====================================================
@@ -635,20 +604,15 @@ const DailyWorksheet = () => {
         ====================================================== */}
 
         <div className="flex justify-end">
-
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
             className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving
-              ? "Saving..."
-              : "Save Worksheet"}
+            {saving ? "Saving..." : "Save Worksheet"}
           </button>
-
         </div>
-
       </div>
     </Layout>
   );

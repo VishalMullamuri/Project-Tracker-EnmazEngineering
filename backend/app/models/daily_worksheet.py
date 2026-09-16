@@ -55,7 +55,7 @@ class DailyWorksheet(Base):
 class DailyWorksheetTask(Base):
     __tablename__ = "daily_worksheet_tasks"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     worksheet_id = Column(
         Integer,
         ForeignKey("daily_worksheets.id", ondelete="CASCADE"),
