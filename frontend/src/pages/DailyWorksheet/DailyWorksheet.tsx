@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { TextareaHTMLAttributes } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "../../components/layout/Layout";
 import SummaryCard from "../../components/dashboard/SummaryCard";
 import type {
+  DailyWorksheetResponse,
   DailyWorksheetTask,
   DailyWorksheetTaskStatus,
 } from "../../services/dailyWorksheetService";
@@ -15,29 +17,84 @@ import {
 
 import {
   AlertCircle,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  CalendarCheck,
-  CheckCircle2,
   Clock3,
   Hourglass,
+  Plus,
   Trash2,
 } from "lucide-react";
 
-interface DailyWorksheetData {
-  employee_name?: string;
-  tasks: DailyWorksheetTask[];
+/* -------------------------------------------------------------------------- */
+/*  Types                                                                     */
+/* -------------------------------------------------------------------------- */
+
+type TaskField = "title" | "description" | "status" | "remarks";
+
+/**
+ * Every row gets a stable client-side key. Unsaved tasks have no `id`,
+ * so without this, editing one new row would edit ALL new rows.
+ * The key is never sent to the API.
+ */
+interface WorksheetTask extends DailyWorksheetTask {
+  clientKey: string;
 }
 
-const statusSelectStyle: Record<DailyWorksheetTaskStatus, string> = {
-  "Not Started": "text-slate-600",
-  "In Progress": "text-blue-600",
-  Completed: "text-green-600",
+/* -------------------------------------------------------------------------- */
+/*  Constants                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const STATUS_OPTIONS: DailyWorksheetTaskStatus[] = [
+  "Not Started",
+  "In Progress",
+  "Completed",
+];
+
+const statusStyles: Record<
+  DailyWorksheetTaskStatus,
+  { select: string; dot: string }
+> = {
+  "Not Started": {
+    select: "border-slate-300 bg-white text-slate-600",
+    dot: "bg-slate-400",
+  },
+  "In Progress": {
+    select: "border-blue-200 bg-blue-50 text-blue-700",
+    dot: "bg-blue-500",
+  },
+  Completed: {
+    select: "border-green-200 bg-green-50 text-green-700",
+    dot: "bg-green-500",
+  },
 };
 
-const inputClass =
-  "w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-slate-400";
+/*
+  One grid definition shared by the column header and every task row,
+  so the columns can never drift apart.
+  Sl.No. | Task | Status | Comments | Action
+  Below the `lg` breakpoint each row stacks into a labelled card.
+*/
+const rowGrid =
+  "lg:grid lg:grid-cols-[56px_minmax(0,1.4fr)_176px_minmax(0,1.6fr)_64px] lg:gap-x-4";
+
+const controlBase =
+  "w-full rounded-lg border px-3 text-sm outline-none transition-shadow placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30";
+
+const fieldSurface = "border-slate-300 bg-white";
+
+const ghostInput =
+  "w-full h-8 rounded-md border border-transparent bg-transparent px-3 text-xs text-slate-500 outline-none transition-shadow placeholder:text-slate-400 hover:border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/30";
+
+const mobileLabel =
+  "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 lg:hidden";
+
+/* -------------------------------------------------------------------------- */
+/*  Helpers                                                                   */
+/* -------------------------------------------------------------------------- */
 
 const formatLocalDate = (date: Date) => {
   const year = date.getFullYear();
@@ -47,44 +104,293 @@ const formatLocalDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+};
+
+const formatLongDate = (value: string) =>
+  parseLocalDate(value).toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+let clientKeyCounter = 0;
+
+const createClientKey = () => {
+  clientKeyCounter += 1;
+
+  return `new-${clientKeyCounter}`;
+};
+
+const toWorksheetTask = (task: DailyWorksheetTask): WorksheetTask => ({
+  ...task,
+  clientKey:
+    typeof task.id === "number" ? `saved-${task.id}` : createClientKey(),
+});
+
+const serializeTask = (task: DailyWorksheetTask) =>
+  JSON.stringify([
+    task.title,
+    task.description ?? "",
+    task.status,
+    task.remarks ?? "",
+  ]);
+
+/* -------------------------------------------------------------------------- */
+/*  Auto-growing textarea (starts as one line, grows with the content)        */
+/* -------------------------------------------------------------------------- */
+
+const AutoGrowTextarea = ({
+  value,
+  className,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+
+    if (!element) {
+      return;
+    }
+
+    element.style.height = "auto";
+
+    const borders = element.offsetHeight - element.clientHeight;
+
+    element.style.height = `${element.scrollHeight + borders}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      className={className}
+      {...props}
+    />
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*  Task row                                                                  */
+/* -------------------------------------------------------------------------- */
+
+interface TaskRowProps {
+  task: WorksheetTask;
+  index: number;
+  autoFocusTitle: boolean;
+  onChange: (clientKey: string, field: TaskField, value: string) => void;
+  onDelete: (task: WorksheetTask) => void;
+}
+
+const TaskRow = ({
+  task,
+  index,
+  autoFocusTitle,
+  onChange,
+  onDelete,
+}: TaskRowProps) => {
+  const style = statusStyles[task.status] ?? statusStyles["Not Started"];
+  const isCompleted = task.status === "Completed";
+
+  return (
+    <div
+      className={`flex flex-col gap-4 px-6 py-4 transition-colors hover:bg-blue-50/40 lg:items-start ${rowGrid}`}
+    >
+      {/* Sl.No. */}
+      <div className="hidden h-10 items-center justify-center text-sm font-medium tabular-nums text-slate-400 lg:flex">
+        {index + 1}
+      </div>
+
+      {/* Task */}
+      <div className="min-w-0">
+        <span className={mobileLabel}>Task {index + 1}</span>
+
+        <input
+          type="text"
+          value={task.title}
+          placeholder="Enter task..."
+          aria-label={`Task ${index + 1} name`}
+          autoFocus={autoFocusTitle}
+          onChange={(event) =>
+            onChange(task.clientKey, "title", event.target.value)
+          }
+          className={`${controlBase} ${fieldSurface} h-10 font-semibold ${
+            isCompleted ? "text-slate-400 line-through" : "text-slate-800"
+          }`}
+        />
+
+        <input
+          type="text"
+          value={task.description ?? ""}
+          placeholder="Add details (optional)"
+          aria-label={`Task ${index + 1} details`}
+          onChange={(event) =>
+            onChange(task.clientKey, "description", event.target.value)
+          }
+          className={`${ghostInput} mt-1`}
+        />
+      </div>
+
+      {/* Status */}
+      <div className="min-w-0">
+        <span className={mobileLabel}>Status</span>
+
+        <div className="relative">
+          <span
+            className={`pointer-events-none absolute left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full ${style.dot}`}
+          />
+
+          <select
+            value={task.status}
+            aria-label={`Task ${index + 1} status`}
+            onChange={(event) =>
+              onChange(task.clientKey, "status", event.target.value)
+            }
+            className={`${controlBase} ${style.select} h-10 cursor-pointer appearance-none pl-8 pr-9 font-medium`}
+          >
+            {STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+
+          <ChevronDown
+            size={16}
+            strokeWidth={2}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+        </div>
+      </div>
+
+      {/* Comments */}
+      <div className="min-w-0">
+        <span className={mobileLabel}>Comments</span>
+
+        <AutoGrowTextarea
+          value={task.remarks ?? ""}
+          placeholder="Enter comments..."
+          aria-label={`Task ${index + 1} comments`}
+          onChange={(event) =>
+            onChange(task.clientKey, "remarks", event.target.value)
+          }
+          className={`${controlBase} ${fieldSurface} max-h-40 min-h-[40px] resize-none overflow-y-auto py-[9px] leading-5 text-slate-700`}
+        />
+      </div>
+
+      {/* Action */}
+      <div className="flex justify-end lg:justify-center">
+        <button
+          type="button"
+          onClick={() => onDelete(task)}
+          title="Delete task"
+          aria-label={`Delete task ${index + 1}`}
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+        >
+          <Trash2 size={15} strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*  Page                                                                      */
+/* -------------------------------------------------------------------------- */
+
 const DailyWorksheet = () => {
   const { employeeId } = useParams<{
     employeeId: string;
   }>();
 
-  const worksheetEmployeeId = employeeId
-    ? Number(employeeId)
-    : undefined;
+  const worksheetEmployeeId = employeeId ? Number(employeeId) : undefined;
+
+  const employeeKey = String(worksheetEmployeeId ?? "self");
 
   const [selectedDate, setSelectedDate] = useState(
     formatLocalDate(new Date())
   );
 
-  const [worksheet, setWorksheet] =
-    useState<DailyWorksheetData | null>(null);
+  const [employeeNames, setEmployeeNames] = useState<Record<string, string>>(
+    {}
+  );
 
+  const [tasks, setTasks] = useState<WorksheetTask[]>([]);
+
+  /* What the server currently has for each saved task (used to detect edits) */
+  const [savedTasks, setSavedTasks] = useState<Record<number, string>>({});
+
+  const [lastAddedKey, setLastAddedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [error, setError] = useState("");
 
-  const loadWorksheet = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+  /* ---------------------------- derived values ---------------------------- */
 
-      const data = await getDailyWorksheet(
-        selectedDate,
-        worksheetEmployeeId
+  const employeeName = employeeNames[employeeKey] ?? "";
+
+  const isToday = selectedDate === formatLocalDate(new Date());
+
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed"
+  ).length;
+
+  const inProgressTasks = tasks.filter(
+    (task) => task.status === "In Progress"
+  ).length;
+
+  const pendingTasks = tasks.filter(
+    (task) => task.status === "Not Started"
+  ).length;
+
+  const progress =
+    tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+
+  const isDirty = tasks.some(
+    (task) =>
+      typeof task.id !== "number" ||
+      savedTasks[task.id] !== serializeTask(task)
+  );
+
+  /* ------------------------------- loading -------------------------------- */
+
+  const applyWorksheet = useCallback(
+    (data: DailyWorksheetResponse | null) => {
+      const incoming = data?.tasks ?? [];
+
+      setTasks(incoming.map(toWorksheetTask));
+
+      setSavedTasks(
+        Object.fromEntries(
+          incoming
+            .filter((task) => typeof task.id === "number")
+            .map((task) => [task.id as number, serializeTask(task)])
+        )
       );
 
-      setWorksheet(data);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load the daily worksheet.");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDate, worksheetEmployeeId]);
+      if (data?.employee_name) {
+        const name = data.employee_name;
+
+        setEmployeeNames((previous) => ({
+          ...previous,
+          [employeeKey]: name,
+        }));
+      }
+    },
+    [employeeKey]
+  );
+
+  const fetchWorksheet = useCallback(
+    () => getDailyWorksheet(selectedDate, worksheetEmployeeId),
+    [selectedDate, worksheetEmployeeId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -92,22 +398,21 @@ const DailyWorksheet = () => {
     const load = async () => {
       setLoading(true);
       setError("");
-      setWorksheet(null);
+      setJustSaved(false);
+      setLastAddedKey(null);
+      setTasks([]);
+      setSavedTasks({});
 
       try {
-        const data = await getDailyWorksheet(
-          selectedDate,
-          worksheetEmployeeId
-        );
+        const data = await fetchWorksheet();
 
         if (!cancelled) {
-          setWorksheet(data);
+          applyWorksheet(data);
         }
       } catch (err) {
         console.error(err);
 
         if (!cancelled) {
-          setWorksheet(null);
           setError("Unable to load the daily worksheet.");
         }
       } finally {
@@ -122,120 +427,103 @@ const DailyWorksheet = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, worksheetEmployeeId]);
+  }, [fetchWorksheet, applyWorksheet]);
+
+  /* Hide the "saved" confirmation after a few seconds */
+  useEffect(() => {
+    if (!justSaved) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setJustSaved(false), 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [justSaved]);
+
+  /* ------------------------------- handlers ------------------------------- */
+
+  const goToDate = (nextDate: string) => {
+    if (!nextDate || nextDate === selectedDate) {
+      return;
+    }
+
+    if (
+      isDirty &&
+      !window.confirm(
+        "You have unsaved changes. Discard them and change the date?"
+      )
+    ) {
+      return;
+    }
+
+    setSelectedDate(nextDate);
+  };
 
   const changeDate = (days: number) => {
-    const [year, month, day] = selectedDate
-      .split("-")
-      .map(Number);
-
-    const date = new Date(year, month - 1, day);
+    const date = parseLocalDate(selectedDate);
 
     date.setDate(date.getDate() + days);
 
-    setSelectedDate(formatLocalDate(date));
-  };
-
-  const handlePreviousDay = () => {
-    changeDate(-1);
-  };
-
-  const handleNextDay = () => {
-    changeDate(1);
-  };
-
-  const handleToday = () => {
-    setSelectedDate(formatLocalDate(new Date()));
+    goToDate(formatLocalDate(date));
   };
 
   const handleTaskChange = (
-    taskId: number | undefined,
-    field: "title" | "description" | "status" | "remarks",
+    clientKey: string,
+    field: TaskField,
     value: string
   ) => {
-    setWorksheet((previous) => {
-      if (!previous) {
-        return previous;
-      }
+    setJustSaved(false);
 
-      return {
-        ...previous,
-        tasks: previous.tasks.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                [field]:
-                  field === "status"
-                    ? (value as DailyWorksheetTaskStatus)
-                    : value,
-              }
-            : task
-        ),
-      };
-    });
+    setTasks((previous) =>
+      previous.map((task) =>
+        task.clientKey === clientKey
+          ? {
+              ...task,
+              [field]:
+                field === "status"
+                  ? (value as DailyWorksheetTaskStatus)
+                  : value,
+            }
+          : task
+      )
+    );
   };
 
   const handleAddTask = () => {
-    const newTask: DailyWorksheetTask = {
+    const newTask: WorksheetTask = {
+      clientKey: createClientKey(),
       title: "",
       description: "",
       status: "Not Started",
       remarks: "",
     };
 
-    setWorksheet((previous) => {
-      if (!previous) {
-        return {
-          employee_name: "",
-          tasks: [newTask],
-        };
-      }
-
-      return {
-        ...previous,
-        tasks: [
-          ...previous.tasks,
-          newTask,
-        ],
-      };
-    });
+    setJustSaved(false);
+    setLastAddedKey(newTask.clientKey);
+    setTasks((previous) => [...previous, newTask]);
   };
 
-  const handleDeleteTask = async (
-    task: DailyWorksheetTask
-  ) => {
+  const handleDeleteTask = async (task: WorksheetTask) => {
+    if (typeof task.id !== "number") {
+      setTasks((previous) =>
+        previous.filter((item) => item.clientKey !== task.clientKey)
+      );
+
+      return;
+    }
+
+    if (!window.confirm("Delete this task? This can't be undone.")) {
+      return;
+    }
+
     try {
-      if (typeof task.id !== "number") {
-        setWorksheet((previous) => {
-          if (!previous) {
-            return previous;
-          }
-
-          return {
-            ...previous,
-            tasks: previous.tasks.filter(
-              (item) => item !== task
-            ),
-          };
-        });
-
-        return;
-      }
+      setError("");
 
       await deleteDailyWorksheet(task.id);
 
-      setWorksheet((previous) => {
-        if (!previous) {
-          return previous;
-        }
-
-        return {
-          ...previous,
-          tasks: previous.tasks.filter(
-            (item) => item.id !== task.id
-          ),
-        };
-      });
+      setTasks((previous) =>
+        previous.filter((item) => item.clientKey !== task.clientKey)
+      );
     } catch (err) {
       console.error(err);
       setError("Unable to delete the task.");
@@ -243,7 +531,13 @@ const DailyWorksheet = () => {
   };
 
   const handleSave = async () => {
-    if (!worksheet) {
+    if (tasks.length === 0) {
+      return;
+    }
+
+    if (tasks.some((task) => !task.title.trim())) {
+      setError("Please enter a task name for every row before saving.");
+
       return;
     }
 
@@ -251,24 +545,21 @@ const DailyWorksheet = () => {
       setSaving(true);
       setError("");
 
-      const tasks: DailyWorksheetTask[] =
-        worksheet.tasks.map((task) => ({
-          ...(typeof task.id === "number"
-            ? { id: task.id }
-            : {}),
-          title: task.title,
-          description: task.description ?? null,
-          status: task.status,
-          remarks: task.remarks ?? null,
-        }));
+      const payload: DailyWorksheetTask[] = tasks.map((task) => ({
+        ...(typeof task.id === "number" ? { id: task.id } : {}),
+        title: task.title.trim(),
+        description: task.description ?? null,
+        status: task.status,
+        remarks: task.remarks ?? null,
+      }));
 
-      await updateDailyWorksheet(
-        selectedDate,
-        worksheetEmployeeId,
-        { tasks }
-      );
+      await updateDailyWorksheet(selectedDate, worksheetEmployeeId, {
+        tasks: payload,
+      });
 
-      await loadWorksheet();
+      applyWorksheet(await fetchWorksheet());
+
+      setJustSaved(true);
     } catch (err) {
       console.error(err);
       setError("Unable to save the daily worksheet.");
@@ -277,97 +568,87 @@ const DailyWorksheet = () => {
     }
   };
 
-  const tasks = worksheet?.tasks ?? [];
-
-  const completedTasks = tasks.filter(
-    (task) => task.status === "Completed"
-  ).length;
-
-  const inProgressTasks = tasks.filter(
-    (task) => task.status === "In Progress"
-  ).length;
-
-  const pendingTasks = tasks.filter(
-    (task) => task.status === "Not Started"
-  ).length;
+  /* -------------------------------- render -------------------------------- */
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* Page heading + date controls */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               Daily Worksheet
             </h1>
 
-            <p className="text-sm text-slate-500 mt-1">
-              {worksheet?.employee_name || "Employee"}
-            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                {(employeeName || "Employee").charAt(0).toUpperCase()}
+              </span>
+
+              <p className="text-sm text-slate-500">
+                {employeeName || "Employee"}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePreviousDay}
-              className="w-9 h-9 rounded-lg border border-slate-300 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition-colors"
-            >
-              <ChevronLeft
-                size={17}
-                strokeWidth={2}
+            <div className="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white shadow-sm">
+              <button
+                type="button"
+                onClick={() => changeDate(-1)}
+                aria-label="Previous day"
+                className="flex h-full w-10 items-center justify-center rounded-l-lg text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                <ChevronLeft size={17} strokeWidth={2} />
+              </button>
+
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => goToDate(event.target.value)}
+                aria-label="Select date"
+                className="h-full border-x border-slate-200 bg-transparent px-3 text-sm text-slate-700 outline-none focus:bg-blue-50/50"
               />
-            </button>
 
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) =>
-                setSelectedDate(event.target.value)
-              }
-              className="h-9 px-3 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-            />
-
-            <button
-              type="button"
-              onClick={handleNextDay}
-              className="w-9 h-9 rounded-lg border border-slate-300 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition-colors"
-            >
-              <ChevronRight
-                size={17}
-                strokeWidth={2}
-              />
-            </button>
+              <button
+                type="button"
+                onClick={() => changeDate(1)}
+                aria-label="Next day"
+                className="flex h-full w-10 items-center justify-center rounded-r-lg text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                <ChevronRight size={17} strokeWidth={2} />
+              </button>
+            </div>
 
             <button
               type="button"
-              onClick={handleToday}
-              className="h-9 px-4 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50/50 text-blue-600 hover:bg-blue-50 transition-colors"
+              onClick={() => goToDate(formatLocalDate(new Date()))}
+              disabled={isToday}
+              className="h-10 rounded-lg border border-blue-200 bg-blue-50/50 px-4 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-blue-50/50"
             >
               Today
             </button>
           </div>
         </div>
 
+        {/* Error */}
         {error && (
-          <div className="px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 flex items-center gap-2">
-            <AlertCircle
-              size={16}
-              className="shrink-0"
-            />
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            <AlertCircle size={16} className="shrink-0" />
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-5">
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             title="Planned"
             value={tasks.length}
-            subtitle="Tasks Today"
-            icon={
-              <CalendarCheck
-                size={28}
-                className="text-blue-600"
-              />
-            }
+            subtitle={isToday ? "Tasks Today" : "Tasks Planned"}
+            icon={<CalendarCheck size={28} className="text-blue-600" />}
             iconBg="bg-blue-100"
           />
 
@@ -375,12 +656,7 @@ const DailyWorksheet = () => {
             title="In Progress"
             value={inProgressTasks}
             subtitle="Currently Running"
-            icon={
-              <Clock3
-                size={28}
-                className="text-blue-600"
-              />
-            }
+            icon={<Clock3 size={28} className="text-blue-600" />}
             iconBg="bg-blue-100"
           />
 
@@ -388,12 +664,7 @@ const DailyWorksheet = () => {
             title="Completed"
             value={completedTasks}
             subtitle="Finished Tasks"
-            icon={
-              <CheckCircle2
-                size={28}
-                className="text-green-600"
-              />
-            }
+            icon={<CheckCircle2 size={28} className="text-green-600" />}
             iconBg="bg-green-100"
           />
 
@@ -401,209 +672,179 @@ const DailyWorksheet = () => {
             title="Pending"
             value={pendingTasks}
             subtitle="Not Yet Done"
-            icon={
-              <Hourglass
-                size={28}
-                className="text-orange-600"
-              />
-            }
+            icon={<Hourglass size={28} className="text-orange-600" />}
             iconBg="bg-orange-100"
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 flex-wrap gap-3">
+        {/* Worksheet card */}
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          {/* Card header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-5">
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Today's Work
+                {isToday ? "Today's Work" : "Work Log"}
               </h2>
 
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tasks planned and worked on for{" "}
-                {selectedDate}
+              <p className="mt-0.5 text-xs text-slate-500">
+                Tasks planned and worked on for {formatLongDate(selectedDate)}
               </p>
             </div>
 
             <button
               type="button"
               onClick={handleAddTask}
-              className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800"
             >
-              + Add Task
+              <Plus size={16} strokeWidth={2.5} />
+              Add Task
             </button>
           </div>
 
           {loading ? (
-            <div className="py-14 flex flex-col items-center justify-center">
-              <p className="text-sm text-slate-500">
-                Loading worksheet...
-              </p>
+            /* Loading skeleton */
+            <div
+              className="divide-y divide-slate-100"
+              aria-busy="true"
+            >
+              <span className="sr-only">Loading worksheet...</span>
+
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="flex animate-pulse items-center gap-4 px-6 py-5"
+                >
+                  <div className="h-4 w-6 rounded bg-slate-100" />
+                  <div className="h-10 flex-1 rounded-lg bg-slate-100" />
+                  <div className="hidden h-10 w-44 rounded-lg bg-slate-100 sm:block" />
+                  <div className="hidden h-10 flex-[1.4] rounded-lg bg-slate-100 md:block" />
+                </div>
+              ))}
             </div>
           ) : tasks.length === 0 ? (
-            <div className="py-14 flex flex-col items-center justify-center">
-              <ClipboardList
-                size={40}
-                strokeWidth={1.5}
-                className="text-slate-300 mb-3"
-              />
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center px-6 py-16">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                <ClipboardList
+                  size={30}
+                  strokeWidth={1.5}
+                  className="text-blue-500"
+                />
+              </div>
 
               <h3 className="text-sm font-semibold text-slate-700">
                 No Tasks Planned
               </h3>
 
-              <p className="text-xs text-slate-500 mt-1">
-                Add a task to start logging today's work.
+              <p className="mt-1 text-xs text-slate-500">
+                {isToday
+                  ? "Add a task to start logging today's work."
+                  : "Add a task to start logging work for this day."}
               </p>
+
+              <button
+                type="button"
+                onClick={handleAddTask}
+                className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/50 px-4 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                Add your first task
+              </button>
             </div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full table-fixed">
-                <thead className="bg-slate-50">
-                  <tr className="text-[11px] uppercase tracking-wider text-slate-500">
-                    <th className="py-3 px-5 text-center w-16 font-semibold">
-                      Sl.No.
-                    </th>
+            <>
+              {/* Progress strip */}
+              <div className="flex items-center gap-4 border-b border-slate-200 bg-slate-50/60 px-6 py-3">
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress}
+                  aria-label="Completed tasks"
+                  className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200"
+                >
+                  <div
+                    className="h-full rounded-full bg-green-500 transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
 
-                    <th className="py-3 px-5 text-left w-[28%] font-semibold">
-                      Task
-                    </th>
+                <span className="shrink-0 text-xs text-slate-500">
+                  {completedTasks} of {tasks.length} completed
+                </span>
 
-                    <th className="py-3 px-5 text-left w-40 font-semibold">
-                      Status
-                    </th>
+                <span className="w-9 shrink-0 text-right text-xs font-semibold text-slate-800">
+                  {progress}%
+                </span>
+              </div>
 
-                    <th className="py-3 px-5 text-left font-semibold">
-                      Comments
-                    </th>
+              {/* Column headers (desktop only) */}
+              <div
+                className={`hidden border-b border-slate-200 bg-slate-50 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 lg:items-center ${rowGrid}`}
+              >
+                <div className="text-center">Sl.No.</div>
+                <div className="px-3">Task</div>
+                <div className="px-3">Status</div>
+                <div className="px-3">Comments</div>
+                <div className="text-center">Action</div>
+              </div>
 
-                    <th className="py-3 px-5 text-center w-20 font-semibold">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
+              {/* Rows */}
+              <div className="divide-y divide-slate-100">
+                {tasks.map((task, index) => (
+                  <TaskRow
+                    key={task.clientKey}
+                    task={task}
+                    index={index}
+                    autoFocusTitle={task.clientKey === lastAddedKey}
+                    onChange={handleTaskChange}
+                    onDelete={handleDeleteTask}
+                  />
+                ))}
+              </div>
 
-                <tbody>
-                  {tasks.map((task, index) => (
-                    <tr
-                      key={
-                        typeof task.id === "number"
-                          ? task.id
-                          : `new-${index}`
-                      }
-                      className="border-b border-slate-100 last:border-b-0 hover:bg-blue-50/40 transition-colors"
-                    >
-                      <td className="py-4 px-5 text-center text-sm text-slate-500 align-top">
-                        {index + 1}
-                      </td>
+              {/* Add another task */}
+              <button
+                type="button"
+                onClick={handleAddTask}
+                className="flex w-full items-center justify-center gap-2 border-t border-dashed border-slate-200 py-3.5 text-sm font-medium text-slate-500 transition-colors hover:bg-blue-50/50 hover:text-blue-600"
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                Add another task
+              </button>
 
-                      <td className="py-4 px-5 align-top">
-                        {typeof task.id !== "number" ? (
-                          <input
-                            type="text"
-                            placeholder="Enter task..."
-                            value={task.title}
-                            onChange={(event) =>
-                              handleTaskChange(
-                                task.id,
-                                "title",
-                                event.target.value
-                              )
-                            }
-                            className={inputClass}
-                          />
-                        ) : (
-                          <div>
-                            <div className="text-sm font-semibold text-slate-800 leading-snug">
-                              {task.title}
-                            </div>
+              {/* Footer: status + save */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
+                <div aria-live="polite">
+                  {isDirty ? (
+                    <span className="inline-flex items-center gap-2 text-sm font-medium text-amber-600">
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
+                      Unsaved changes
+                    </span>
+                  ) : justSaved ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
+                      <CheckCircle2 size={16} />
+                      All changes saved
+                    </span>
+                  ) : (
+                    <span className="text-sm text-slate-500">
+                      {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+                    </span>
+                  )}
+                </div>
 
-                            {task.description && (
-                              <div className="text-xs text-slate-500 mt-1 leading-snug">
-                                {task.description}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-4 px-5 align-top">
-                        <select
-                          value={task.status}
-                          onChange={(event) =>
-                            handleTaskChange(
-                              task.id,
-                              "status",
-                              event.target.value
-                            )
-                          }
-                          className={`${inputClass} bg-white font-medium ${
-                            statusSelectStyle[task.status] ??
-                            "text-slate-600"
-                          }`}
-                        >
-                          <option value="Not Started">
-                            Not Started
-                          </option>
-
-                          <option value="In Progress">
-                            In Progress
-                          </option>
-
-                          <option value="Completed">
-                            Completed
-                          </option>
-                        </select>
-                      </td>
-
-                      <td className="py-4 px-5 align-top">
-                        <textarea
-                          value={task.remarks ?? ""}
-                          placeholder="Enter comments..."
-                          onChange={(event) =>
-                            handleTaskChange(
-                              task.id,
-                              "remarks",
-                              event.target.value
-                            )
-                          }
-                          rows={2}
-                          className={`${inputClass} resize-y min-h-[70px]`}
-                        />
-                      </td>
-
-                      <td className="py-4 px-5 text-center align-top">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDeleteTask(task)
-                          }
-                          title="Delete task"
-                          className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center mx-auto hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2
-                            size={14}
-                            strokeWidth={2}
-                          />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || !isDirty}
+                  className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save Worksheet"}
+                </button>
+              </div>
+            </>
           )}
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? "Saving..." : "Save Worksheet"}
-          </button>
-        </div>
+        </section>
       </div>
     </Layout>
   );

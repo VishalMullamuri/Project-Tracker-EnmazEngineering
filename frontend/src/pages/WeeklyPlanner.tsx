@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-type TaskStatus = "Not Started" | "In Progress" | "Completed" | "Delayed";
+type TaskStatus = "Not Started" | "In Progress" | "Completed" | "Delayed" | "On Hold";
 
 type Employee = {
   id: number;
@@ -59,6 +59,7 @@ const statusOptions: TaskStatus[] = [
   "In Progress",
   "Completed",
   "Delayed",
+  "On Hold",
 ];
 
 const statusPillStyles: Record<TaskStatus, string> = {
@@ -66,6 +67,7 @@ const statusPillStyles: Record<TaskStatus, string> = {
   "In Progress": "bg-blue-100 text-blue-700",
   Completed: "bg-green-100 text-green-700",
   Delayed: "bg-red-100 text-red-700",
+  "On Hold": "bg-yellow-100 text-yellow-800",
 };
 
 const getStatusStyle = (status: TaskStatus) => {
@@ -296,14 +298,16 @@ const WeeklyPlanner = () => {
    */
 
   const filteredTasks = useMemo(() => {
+    const searchTerm = search.trim().toLowerCase();
+
     return tasks.filter((task) => {
       const employeeName = task.employee_name || "";
       const remarks = task.remarks || "";
 
       const matchesSearch =
-        task.task.toLowerCase().includes(search.toLowerCase()) ||
-        employeeName.toLowerCase().includes(search.toLowerCase()) ||
-        remarks.toLowerCase().includes(search.toLowerCase());
+        task.task.toLowerCase().includes(searchTerm) ||
+        employeeName.toLowerCase().includes(searchTerm) ||
+        remarks.toLowerCase().includes(searchTerm);
 
       if (statusFilter === "All") {
         return matchesSearch;
@@ -690,7 +694,7 @@ const WeeklyPlanner = () => {
             />
             <input
               type="text"
-              placeholder="Search task..."
+              placeholder="Search task or Employee..."
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);

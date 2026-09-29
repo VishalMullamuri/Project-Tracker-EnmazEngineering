@@ -98,15 +98,6 @@ def create_task(
 
     assigned_to = task.assigned_to
 
-    if current_user.role == UserRole.TEAM_MEMBER:
-        if task.assigned_to != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Team members can only assign tasks to themselves",
-            )
-
-        assigned_to = current_user.id
-
     _resolve_project_member(
         db,
         task.project_id,
@@ -187,9 +178,12 @@ def get_all_tasks(
                 member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.assigned_to == current_user.id,
                 member_employee.user_id == current_user.id,
                 member_employee.is_active.is_(True),
+                (
+                    (Task.assigned_to == current_user.id)
+                    | (Task.created_by == current_user.id)
+                ),
             )
         )
 
@@ -251,9 +245,12 @@ def get_task(
                 member_employee.id == ProjectEmployee.employee_id,
             )
             .filter(
-                Task.assigned_to == current_user.id,
                 member_employee.user_id == current_user.id,
                 member_employee.is_active.is_(True),
+                (
+                    (Task.assigned_to == current_user.id)
+                    | (Task.created_by == current_user.id)
+                ),
             )
         )
 
@@ -372,16 +369,6 @@ def update_task(
                     + ", ".join(forbidden_fields)
                 ),
             )
-
-        if "assigned_to" in update_data:
-            if update_data["assigned_to"] != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=(
-                        "Team members can only assign "
-                        "tasks to themselves"
-                    ),
-                )
 
         update_data = {
             key: value

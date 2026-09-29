@@ -37,6 +37,7 @@ class EmployeeResponse(BaseModel):
 
 class TeamMemberEmployeeResponse(BaseModel):
     id: int
+    user_id: int
     name: str
 
     class Config:
@@ -45,6 +46,7 @@ class TeamMemberEmployeeResponse(BaseModel):
 
 class AssignableEmployeeResponse(BaseModel):
     id: int
+    user_id: int
     name: str
 
     class Config:

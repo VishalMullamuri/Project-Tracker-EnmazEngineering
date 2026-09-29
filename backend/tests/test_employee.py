@@ -15,7 +15,8 @@ def test_team_member_employee_response_contains_only_allowed_fields(
     assert len(data) >= 1
 
     for employee in data:
-        assert set(employee.keys()) == {"id", "name"}
+        assert set(employee.keys()) == {"id", "name", "user_id"}
+        assert employee["user_id"] is not None
 
 
 def test_team_member_can_get_own_employee_response(
@@ -32,7 +33,9 @@ def test_team_member_can_get_own_employee_response(
 
     data = response.json()
 
-    assert set(data.keys()) == {"id", "name"}
+    assert set(data.keys()) == {"id", "name", "user_id"}
+    assert data["id"] == employee_user.id
+    assert data["user_id"] == employee_user.user_id
 
 
 def test_admin_employee_response_contains_full_fields(
@@ -77,6 +80,7 @@ def test_recreating_deleted_employee_creates_new_account(
     )
 
     assert delete_response.status_code == 200
+
     inactive_users_response = client.get(
         "/users?include_inactive=true",
         headers=admin_headers,
@@ -118,7 +122,7 @@ def test_recreating_deleted_employee_creates_new_account(
     assert login_response.status_code == 200
 
     new_employee_headers = {
-        "Authorization": (f"Bearer {login_response.json()['access_token']}")
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
     }
 
     tasks_response = client.get(

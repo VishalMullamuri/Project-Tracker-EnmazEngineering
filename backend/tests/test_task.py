@@ -538,10 +538,72 @@ def test_team_member_can_create_task(
     assert data["created_by"] == employee_user.user_id
 
 
-def test_team_member_cannot_assign_task_to_other_user(
+def test_team_member_can_assign_task_to_another_project_team_member(
     client,
     employee_headers,
     employee_user,
+    project,
+    db,
+):
+    from app.core.enums import UserRole
+    from app.core.security import hash_password
+    from app.models.employee import Employee
+    from app.models.project_employee import ProjectEmployee
+    from app.models.user import User
+
+    other_user = User(
+        name="Other Project Member",
+        email="other-project-member@test.com",
+        password=hash_password("OtherMember@123"),
+        role=UserRole.TEAM_MEMBER,
+        is_active=True,
+        first_login=False,
+    )
+    db.add(other_user)
+    db.flush()
+
+    other_employee = Employee(
+        name=other_user.name,
+        email=other_user.email,
+        phone="9999999999",
+        user_id=other_user.id,
+        created_by=employee_user.user_id,
+        is_active=True,
+    )
+    db.add(other_employee)
+    db.flush()
+
+    db.add(
+        ProjectEmployee(
+            project_id=project.id,
+            employee_id=other_employee.id,
+        )
+    )
+    db.commit()
+
+    response = client.post(
+        "/tasks",
+        headers=employee_headers,
+        json={
+            "project_id": project.id,
+            "assigned_to": other_user.id,
+            "title": "Task Assigned to Teammate",
+            "description": "Assigned to another member of the same project",
+            "priority": "High",
+            "start_date": str(date.today()),
+            "due_date": str(date.today()),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["assigned_to"] == other_user.id
+    assert data["created_by"] == employee_user.user_id
+
+
+def test_team_member_cannot_assign_task_to_manager(
+    client,
+    employee_headers,
     manager_user,
     project,
 ):
@@ -552,11 +614,12 @@ def test_team_member_cannot_assign_task_to_other_user(
             "project_id": project.id,
             "assigned_to": manager_user.id,
             "title": "Unauthorized Assignment",
-            "description": "Should fail",
+            "description": "A team member cannot assign a task to a manager",
             "priority": "High",
             "start_date": str(date.today()),
             "due_date": str(date.today()),
         },
     )
 
-    assert response.status_code == 403
+    # The current API returns 400 for an ineligible assignee.
+    assert response.status_code == 400

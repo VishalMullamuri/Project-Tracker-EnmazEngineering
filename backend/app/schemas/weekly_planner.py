@@ -13,6 +13,7 @@ class WeeklyPlannerStatus(str, Enum):
     IN_PROGRESS = "In Progress"
     COMPLETED = "Completed"
     DELAYED = "Delayed"
+    ON_HOLD = "On Hold"
 
 
 class WeeklyPlannerCreate(BaseModel):

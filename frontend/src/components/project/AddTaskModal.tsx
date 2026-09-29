@@ -42,21 +42,14 @@ const AddTaskModal = ({
   onClose,
   onSaveTask,
 }: Props) => {
-  const user = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
-
-  const isTeamMember =
-    user.role === "TEAM_MEMBER";
-
   const [title, setTitle] =
     useState("");
 
   const [description, setDescription] =
     useState("");
 
-  const [assignedTo, setAssignedTo] =
-    useState(0);
+  const [assignedTo, setAssignedTo] = 
+    useState("");
 
   const [status, setStatus] =
     useState<
@@ -82,33 +75,26 @@ const AddTaskModal = ({
     useState("");
 
   useEffect(() => {
-    if (editingTask) {
-      setTitle(editingTask.title);
-      setDescription(editingTask.description);
-      setAssignedTo(editingTask.assigned_to);
-      setStatus(editingTask.status);
-      setPriority(editingTask.priority);
-      setRemarks(editingTask.remarks ?? "");
-      setStartDate(editingTask.start_date);
-      setDueDate(editingTask.due_date);
-    } else {
-      setTitle("");
-      setDescription("");
-      setAssignedTo(
-        isTeamMember ? user.id : 0
-      );
-      setStatus("Not Started");
-      setPriority("Medium");
-      setRemarks("");
-      setStartDate("");
-      setDueDate("");
-    }
-  }, [
-    editingTask,
-    isOpen,
-    isTeamMember,
-    user.id,
-  ]);
+  if (editingTask) {
+    setTitle(editingTask.title);
+    setDescription(editingTask.description);
+    setAssignedTo(String(editingTask.assigned_to ?? ""));
+    setStatus(editingTask.status);
+    setPriority(editingTask.priority);
+    setRemarks(editingTask.remarks ?? "");
+    setStartDate(editingTask.start_date);
+    setDueDate(editingTask.due_date);
+  } else {
+    setTitle("");
+    setDescription("");
+    setAssignedTo("");
+    setStatus("Not Started");
+    setPriority("Medium");
+    setRemarks("");
+    setStartDate("");
+    setDueDate("");
+  }
+}, [editingTask, isOpen]);
 
   if (!isOpen) return null;
 
@@ -118,15 +104,16 @@ const AddTaskModal = ({
       return;
     }
 
-    if (!isTeamMember && assignedTo === 0) {
-      alert("Please select a team member.");
+    const assignedToUserId = Number(assignedTo);
+
+    if (
+      !assignedTo ||
+      !Number.isInteger(assignedToUserId) ||
+      assignedToUserId <= 0
+    ) {
+      alert("Please select a valid team member.");
       return;
     }
-
-    const assignedToUserId =
-      isTeamMember
-        ? user.id
-        : assignedTo;
 
     if (!startDate) {
       alert("Please select a start date.");
@@ -266,31 +253,26 @@ const AddTaskModal = ({
             </div>
 
             {/* Assigned To */}
+<div>
+  <label className={labelClass}>Assigned To</label>
 
-            {!isTeamMember && (
-              <div>
-                <label className={labelClass}>Assigned To</label>
+  <select
+    value={assignedTo}
+    onChange={(e) => setAssignedTo(e.target.value)}
+    className={`${inputClass} bg-white`}
+  >
+    <option value="">Select Employee</option>
 
-                <select
-                  value={assignedTo}
-                  onChange={(e) =>
-                    setAssignedTo(Number(e.target.value))
-                  }
-                  className={`${inputClass} bg-white`}
-                >
-                  <option value={0}>Select Employee</option>
-
-                  {employees.map((employee) => (
-                    <option
-                      key={employee.id}
-                      value={employee.user_id}
-                    >
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+    {employees.map((employee) => (
+      <option
+        key={employee.id}
+        value={String(employee.user_id ?? "")}
+      >
+        {employee.name}
+      </option>
+    ))}
+  </select>
+</div>
 
             {/* Priority */}
 

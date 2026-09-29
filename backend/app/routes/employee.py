@@ -1,3 +1,4 @@
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -92,12 +93,16 @@ def get_all(
         return [
             TeamMemberEmployeeResponse(
                 id=employee.id,
+                user_id=employee.user_id,
                 name=employee.name,
             )
             for employee in employees
         ]
 
-    return [EmployeeResponse.model_validate(employee) for employee in employees]
+    return [
+        EmployeeResponse.model_validate(employee)
+        for employee in employees
+    ]
 
 
 # ----------------------------------
@@ -153,6 +158,7 @@ def get(
     if current_user.role == UserRole.TEAM_MEMBER:
         return TeamMemberEmployeeResponse(
             id=employee.id,
+            user_id=employee.user_id,
             name=employee.name,
         )
 

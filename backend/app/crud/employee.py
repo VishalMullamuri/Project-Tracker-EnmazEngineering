@@ -120,6 +120,7 @@ def get_all_employees(
         return [
             TeamMemberEmployeeResponse(
                 id=employee.id,
+                user_id=employee.user_id,
                 name=employee.name,
             )
             for employee in employees
@@ -170,6 +171,7 @@ def get_employee_for_user(
     if current_user.role == UserRole.TEAM_MEMBER:
         return TeamMemberEmployeeResponse(
             id=employee.id,
+            user_id=employee.user_id,
             name=employee.name,
         )
 
