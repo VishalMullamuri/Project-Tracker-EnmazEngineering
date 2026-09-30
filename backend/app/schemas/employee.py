@@ -51,3 +51,4 @@ class AssignableEmployeeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        

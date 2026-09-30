@@ -623,3 +623,6 @@ def test_team_member_cannot_assign_task_to_manager(
 
     # The current API returns 400 for an ineligible assignee.
     assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Assigned employee must be an active team member on this project"
+    )

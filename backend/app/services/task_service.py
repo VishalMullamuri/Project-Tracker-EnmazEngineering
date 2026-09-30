@@ -42,7 +42,7 @@ def _resolve_project_member(
     if not employee:
         raise HTTPException(
             status_code=400,
-            detail="Assigned employee is not a member of this project",
+            detail="Assigned employee must be an active team member on this project",
         )
 
     return employee
