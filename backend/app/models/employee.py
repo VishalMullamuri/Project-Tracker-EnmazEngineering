@@ -1,3 +1,4 @@
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -61,6 +62,21 @@ class Employee(Base):
         foreign_keys=[user_id],
     )
 
+    department_memberships = relationship(
+        "EmployeeDepartment",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )
+
     @property
     def role(self) -> UserRole | None:
         return self.user.role if self.user else None
+
+    @property
+    def department_names(self) -> list[str]:
+        return [
+            membership.department.name
+            for membership in self.department_memberships
+            if membership.department is not None
+            and membership.department.is_active
+        ]

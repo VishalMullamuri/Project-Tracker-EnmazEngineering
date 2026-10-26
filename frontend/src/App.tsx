@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login/Login";
@@ -10,26 +11,18 @@ import ChangePassword from "./pages/ChangePassword";
 import MyWork from "./pages/MyWork";
 import WeeklyPlanner from "./pages/WeeklyPlanner";
 import DailyWorksheet from "./pages/DailyWorksheet/DailyWorksheet";
+import SupportTickets from "./pages/SupportTickets";
+import Layout from "./components/layout/Layout";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Authentication */}
-
-        <Route
-          path="/"
-          element={<Login />}
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
 
         {/* My Work */}
-
         <Route
           path="/my-work"
           element={
@@ -40,7 +33,6 @@ function App() {
         />
 
         {/* Daily Worksheet */}
-
         <Route
           path="/daily-worksheet"
           element={
@@ -51,7 +43,6 @@ function App() {
         />
 
         {/* Employee Daily Worksheet — Admin / Manager only */}
-
         <Route
           path="/employee/:employeeId/worksheet"
           element={
@@ -62,7 +53,6 @@ function App() {
         />
 
         {/* Admin / Manager Dashboard */}
-
         <Route
           path="/admin"
           element={
@@ -73,7 +63,6 @@ function App() {
         />
 
         {/* Change Password */}
-
         <Route
           path="/change-password"
           element={
@@ -83,8 +72,7 @@ function App() {
           }
         />
 
-        {/* Employee Details */}
-
+        {/* Employee Details — Admin / Manager only */}
         <Route
           path="/employee/:id"
           element={
@@ -95,7 +83,6 @@ function App() {
         />
 
         {/* Weekly Planner — Admin / Manager only */}
-
         <Route
           path="/weekly-planner"
           element={
@@ -105,8 +92,19 @@ function App() {
           }
         />
 
-        {/* Protected Dashboard */}
+        {/* Support Tickets */}
+        
+<Route
+  path="/support-tickets"
+  element={
+    <ProtectedRoute>
+      <SupportTickets />
+    </ProtectedRoute>
+  }
+/>
 
+
+        {/* Protected Dashboard */}
         <Route
           path="/dashboard"
           element={
@@ -117,7 +115,6 @@ function App() {
         />
 
         {/* Protected Project Details */}
-
         <Route
           path="/project/:id"
           element={
@@ -126,7 +123,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
       </Routes>
     </BrowserRouter>
   );

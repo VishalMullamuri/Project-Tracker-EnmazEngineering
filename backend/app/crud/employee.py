@@ -2,19 +2,23 @@ import logging
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import UserRole
 from app.core.permissions import visible_employee_ids
 from app.core.security import hash_password
 from app.crud.user import deactivate_user
+from app.models.department import Department
 from app.models.employee import Employee
+from app.models.employee_department import EmployeeDepartment
 from app.models.user import User
 from app.schemas.employee import (
     EmployeeCreate,
     EmployeeUpdate,
     TeamMemberEmployeeResponse,
 )
+from app.models.department import Department
+from app.models.employee_department import EmployeeDepartment
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +36,26 @@ def create_employee(
             detail="Email already exists.",
         )
 
+    # Validate all department IDs before making any database changes.
+    requested_department_ids = list(dict.fromkeys(employee.department_ids))
+    departments = []
+    if requested_department_ids:
+        departments = (
+            db.query(Department)
+            .filter(
+                Department.id.in_(requested_department_ids),
+                Department.is_active.is_(True),
+            )
+            .all()
+        )
+        found_ids = {department.id for department in departments}
+        invalid_ids = sorted(set(requested_department_ids) - found_ids)
+        if invalid_ids:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid or inactive department ID(s): {invalid_ids}",
+            )
+
     try:
         if existing_user and not existing_user.is_active:
             existing_employee = (
@@ -44,7 +68,6 @@ def create_employee(
             )
 
             tombstone_email = f"deleted-{existing_user.id}@invalid"
-
             existing_user.email = tombstone_email
 
             logger.info(
@@ -64,7 +87,6 @@ def create_employee(
             is_active=True,
             first_login=True,
         )
-
         db.add(db_user)
         db.flush()
 
@@ -76,12 +98,27 @@ def create_employee(
             created_by=current_user.id,
             is_active=True,
         )
-
         db.add(db_employee)
+        db.flush()
+
+        for department in departments:
+            db.add(
+                EmployeeDepartment(
+                    employee_id=db_employee.id,
+                    department_id=department.id,
+                )
+            )
 
         db.commit()
         db.refresh(db_employee)
 
+        # Ensure memberships are available when EmployeeResponse is serialized.
+        db_employee = (
+            db.query(Employee)
+            .options(selectinload(Employee.department_memberships))
+            .filter(Employee.id == db_employee.id)
+            .first()
+        )
         return db_employee
 
     except IntegrityError as err:
@@ -100,21 +137,21 @@ def get_all_employees(
     db: Session,
     current_user: User,
 ):
-    if current_user.role == UserRole.ADMIN:
-        return db.query(Employee).filter(Employee.is_active.is_(True)).all()
+    query = db.query(Employee).options(
+        selectinload(Employee.department_memberships)
+    )
 
-    employees = (
-        db.query(Employee)
-        .filter(
-            Employee.id.in_(
-                visible_employee_ids(
-                    db,
-                    current_user,
-                )
+    if current_user.role == UserRole.ADMIN:
+        return query.filter(Employee.is_active.is_(True)).all()
+
+    employees = query.filter(
+        Employee.id.in_(
+            visible_employee_ids(
+                db,
+                current_user,
             )
         )
-        .all()
-    )
+    ).all()
 
     if current_user.role == UserRole.TEAM_MEMBER:
         return [
@@ -135,6 +172,7 @@ def get_employee(
 ):
     return (
         db.query(Employee)
+        .options(selectinload(Employee.department_memberships))
         .filter(
             Employee.id == employee_id,
             Employee.is_active.is_(True),
@@ -148,7 +186,9 @@ def get_employee_for_user(
     employee_id: int,
     current_user: User,
 ):
-    query = db.query(Employee).filter(
+    query = db.query(Employee).options(
+        selectinload(Employee.department_memberships)
+    ).filter(
         Employee.id == employee_id,
         Employee.is_active.is_(True),
     )
@@ -210,7 +250,7 @@ def update_employee(
     try:
         db.commit()
         db.refresh(db_employee)
-        return db_employee
+        return get_employee(db, employee_id)
 
     except IntegrityError as err:
         db.rollback()
@@ -295,3 +335,62 @@ def get_assignable_employees(
     )
 
     return query.all()
+
+def update_employee_departments(
+    db: Session,
+    employee_id: int,
+    department_ids: list[int],
+):
+    try:
+        employee = (
+            db.query(Employee)
+            .filter(
+                Employee.id == employee_id,
+                Employee.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if employee is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Employee not found.",
+            )
+
+        department_ids = list(set(department_ids))
+
+        if department_ids:
+            active_departments = (
+                db.query(Department)
+                .filter(
+                    Department.id.in_(department_ids),
+                    Department.is_active.is_(True),
+                )
+                .all()
+            )
+
+            if len(active_departments) != len(department_ids):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="One or more departments are invalid or inactive.",
+                )
+
+        db.query(EmployeeDepartment).filter(
+            EmployeeDepartment.employee_id == employee_id
+        ).delete(synchronize_session=False)
+
+        for department_id in department_ids:
+            db.add(
+                EmployeeDepartment(
+                    employee_id=employee_id,
+                    department_id=department_id,
+                )
+            )
+
+        db.commit()
+        return get_employee(db, employee_id)
+
+    except Exception:
+        db.rollback()
+        raise
+    

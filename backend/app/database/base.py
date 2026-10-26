@@ -17,3 +17,12 @@ from app.models.project_employee import (
 from app.models.task import Task as Task
 from app.models.user import User as User
 from app.models.weekly_planner import WeeklyPlanner as WeeklyPlanner
+
+from app.models.department import Department as Department
+from app.models.employee_department import (
+    EmployeeDepartment as EmployeeDepartment,
+)
+
+from app.models.support_ticket import SupportTicket as SupportTicket
+from app.models.ticket_comment import TicketComment as TicketComment
+from app.models.ticket_activity import TicketActivity as TicketActivity

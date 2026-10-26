@@ -27,6 +27,8 @@ from app.database.database import SessionLocal
 from app.routes.employee import router as employee_router
 from app.routes.users import router as users_router
 
+from app.api.support_ticket import router as support_ticket_router
+
 ENV = os.getenv("ENV", "production")
 
 configure_logging()
@@ -153,7 +155,7 @@ app.include_router(user.router)
 app.include_router(employee_router)
 app.include_router(project_employee_router)
 app.include_router(users_router)
-
+app.include_router(support_ticket_router)
 
 # -----------------------------------
 # Root

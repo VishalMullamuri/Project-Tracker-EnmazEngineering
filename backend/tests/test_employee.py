@@ -38,6 +38,7 @@ def test_team_member_can_get_own_employee_response(
     assert data["user_id"] == employee_user.user_id
 
 
+
 def test_admin_employee_response_contains_full_fields(
     client,
     admin_headers,
@@ -62,7 +63,10 @@ def test_admin_employee_response_contains_full_fields(
             "email",
             "phone",
             "role",
+            "department_names",
         }
+
+        assert isinstance(employee["department_names"], list)
 
 
 def test_recreating_deleted_employee_creates_new_account(

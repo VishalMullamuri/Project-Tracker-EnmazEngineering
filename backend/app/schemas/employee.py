@@ -14,6 +14,7 @@ class EmployeeCreate(EmployeeBase):
     email: EmailStr
     password: Annotated[str, Field(min_length=12, max_length=72)]
     role: UserRole = UserRole.TEAM_MEMBER
+    department_ids: list[int] = Field(default_factory=list)
 
 
 class EmployeeUpdate(BaseModel):
@@ -25,11 +26,11 @@ class EmployeeUpdate(BaseModel):
 class EmployeeResponse(BaseModel):
     id: int
     user_id: int | None = None
-
     name: str
     email: EmailStr
     phone: str
     role: UserRole | None = None
+    department_names: list[str] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -51,4 +52,3 @@ class AssignableEmployeeResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        

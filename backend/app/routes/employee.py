@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import UserRole
 from app.core.permissions import require_admin, require_manager
@@ -15,6 +15,7 @@ from app.crud.employee import (
     update_employee,
 )
 from app.database.database import get_db
+from app.models.employee import Employee
 from app.models.user import User
 from app.schemas.employee import (
     AssignableEmployeeResponse,
@@ -23,6 +24,8 @@ from app.schemas.employee import (
     EmployeeUpdate,
     TeamMemberEmployeeResponse,
 )
+from pydantic import BaseModel, Field
+from app.crud.employee import update_employee_departments
 
 router = APIRouter(
     prefix="/employees",
@@ -35,7 +38,6 @@ logger = logging.getLogger(__name__)
 # ----------------------------------
 # Create Employee (Admin Only)
 # ----------------------------------
-
 
 @router.post(
     "",
@@ -65,7 +67,6 @@ def create(
 # ----------------------------------
 # Get All Employees
 # ----------------------------------
-
 
 @router.get(
     "",
@@ -98,6 +99,26 @@ def get_all(
             for employee in employees
         ]
 
+    # Load memberships and departments before serializing responses.
+    employee_ids = [employee.id for employee in employees]
+    if employee_ids:
+        db.query(Employee).options(
+            selectinload(Employee.department_memberships)
+        ).filter(
+            Employee.id.in_(employee_ids)
+        ).all()
+
+        # Refresh the objects returned by the CRUD function with the
+        # eagerly loaded department relationships.
+        employees = (
+            db.query(Employee)
+            .options(
+                selectinload(Employee.department_memberships)
+            )
+            .filter(Employee.id.in_(employee_ids))
+            .all()
+        )
+
     return [
         EmployeeResponse.model_validate(employee)
         for employee in employees
@@ -107,7 +128,6 @@ def get_all(
 # ----------------------------------
 # Get Assignable Employees
 # ----------------------------------
-
 
 @router.get(
     "/assignable",
@@ -130,7 +150,6 @@ def get_assignable(
 # ----------------------------------
 # Get Single Employee
 # ----------------------------------
-
 
 @router.get(
     "/{employee_id}",
@@ -161,13 +180,28 @@ def get(
             name=employee.name,
         )
 
+    # Reload with department memberships for serialization.
+    employee = (
+        db.query(Employee)
+        .options(
+            selectinload(Employee.department_memberships)
+        )
+        .filter(Employee.id == employee_id)
+        .first()
+    )
+
+    if not employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee not found",
+        )
+
     return EmployeeResponse.model_validate(employee)
 
 
 # ----------------------------------
 # Update Employee
 # ----------------------------------
-
 
 @router.put(
     "/{employee_id}",
@@ -205,7 +239,6 @@ def update(
 # Delete Employee (Admin Only)
 # ----------------------------------
 
-
 @router.delete(
     "/{employee_id}",
 )
@@ -235,3 +268,20 @@ def delete(
     return {
         "message": "Employee deleted successfully",
     }
+
+class EmployeeDepartmentsUpdate(BaseModel):
+    department_ids: list[int] = Field(default_factory=list)
+
+
+@router.put("/{employee_id}/departments", response_model=EmployeeResponse)
+def update_employee_department_assignments(
+    employee_id: int,
+    payload: EmployeeDepartmentsUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin),
+):
+    return update_employee_departments(
+        db=db,
+        employee_id=employee_id,
+        department_ids=payload.department_ids,
+    )
